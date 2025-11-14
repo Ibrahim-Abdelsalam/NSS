@@ -304,6 +304,9 @@ def build_and_solve_model(
     # They enable risk management by controlling worst-case shortages
     
     # --- 5. DEFINE CVaR VARIABLES (if needed) ---
+    xi: Optional[pulp.LpVariable] = None
+    z: Optional[Dict] = None
+    
     if model_type == "SDM-CVaR":
         # xi: The Value-at-Risk (VaR) threshold at confidence level σ
         # Corresponds to: ξ ∈ ℝ in the mathematical model
@@ -740,6 +743,9 @@ def build_and_solve_model(
     
     # --- 8. DEFINE CVaR CONSTRAINTS (if needed) ---
     if model_type == "SDM-CVaR":
+        # Ensure CVaR variables were created
+        if xi is None or z is None:
+            raise ValueError("CVaR variables not initialized for SDM-CVaR model type")
         
         # ========================================================================
         # CONSTRAINT 19: CVaR Upper Bound
@@ -851,7 +857,7 @@ def build_and_solve_model(
     return prob, status
 
 
-def extract_results(prob: pulp.LpProblem, nurses_list: List[str], scenarios_df: pd.DataFrame, model_params: Dict[str, Any], model_type: str = "SDM") -> Dict[str, Any]:
+def extract_results(prob: pulp.LpProblem, nurses_list: List[str], scenarios_df: pd.DataFrame, model_params: Dict[str, Any], model_type: str = "SDM") -> Optional[Dict[str, Any]]:
     """
     Extract and organize comprehensive results from the solved optimization model.
     
@@ -973,7 +979,7 @@ def extract_results(prob: pulp.LpProblem, nurses_list: List[str], scenarios_df: 
     total_overtime_shifts = 0
     
     for i in nurses_list:
-        nurse_schedule = {"Nurse": i}
+        nurse_schedule: Dict[str, Union[str, int]] = {"Nurse": i}
         regular_count = 0
         overtime_count = 0
         night_count = 0
@@ -1024,13 +1030,17 @@ def extract_results(prob: pulp.LpProblem, nurses_list: List[str], scenarios_df: 
     
     # Calculate expected recourse cost from the objective value
     total_cost = pulp.value(prob.objective)
+    if total_cost is None:
+        total_cost = 0.0
     stage2_cost = total_cost - stage1_total
     
     cost_breakdown = {
         "total_cost": total_cost,
+        "stage1_cost": stage1_total,  # Alias for validation
         "stage1_total": stage1_total,
         "stage1_regular_cost": stage1_regular_cost,
         "stage1_overtime_cost": stage1_overtime_cost,
+        "stage2_cost": stage2_cost,  # Alias for validation
         "stage2_expected_cost": stage2_cost,
         "total_regular_shifts": total_regular_shifts,
         "total_overtime_shifts": total_overtime_shifts,
@@ -1083,8 +1093,38 @@ def extract_results(prob: pulp.LpProblem, nurses_list: List[str], scenarios_df: 
     
     coverage_df = pd.DataFrame(daily_coverage)
     
+    # ===== 6. SCHEDULE_DF FORMAT (for validation) =====
+    # Alternative schedule format: one row per nurse-day-shift assignment
+    schedule_data = []
+    for i in nurses_list:
+        for j in J_days:
+            for k in K_shifts:
+                var_name_sr = f"RegularShift_{i}_{j}_{k}".replace("'", "").replace(" ", "")
+                var_name_so = f"OvertimeShift_{i}_{j}_{k}".replace("'", "").replace(" ", "")
+                
+                sr_val = var_dict.get(var_name_sr, 0)
+                so_val = var_dict.get(var_name_so, 0)
+                
+                if sr_val > 0.5:
+                    schedule_data.append({
+                        "nurse": i,
+                        "day": j,
+                        "shift": k,
+                        "type": "Regular"
+                    })
+                elif so_val > 0.5:
+                    schedule_data.append({
+                        "nurse": i,
+                        "day": j,
+                        "shift": k,
+                        "type": "Overtime"
+                    })
+    
+    schedule_df = pd.DataFrame(schedule_data)
+    
     return {
         "roster_df": roster_df,
+        "schedule_df": schedule_df,
         "cost_breakdown": cost_breakdown,
         "risk_metrics": risk_metrics,
         "scenario_df": scenario_df,
@@ -1230,10 +1270,10 @@ def validate_parameters(model_params: Dict[str, Any], nurses_list: List[str], sc
     n3 = model_params.get('n3', 10)
     
     if n3 > n1:
-        errors.append(f"❌ Minimum regular shifts (n₃={n3}) cannot exceed maximum total shifts (n₁={n1})")
+        errors.append(f"❌ Minimum regular shifts (n3={n3}) cannot exceed maximum total shifts (n1={n1})")
     
     if n2 > n1:
-        errors.append(f"❌ Maximum night shifts (n₂={n2}) cannot exceed maximum total shifts (n₁={n1})")
+        errors.append(f"❌ Maximum night shifts (n2={n2}) cannot exceed maximum total shifts (n1={n1})")
     
     # 2. Check: Shift type quotas consistency
     shift_quotas = model_params.get('shift_quotas', {})
@@ -1245,7 +1285,7 @@ def validate_parameters(model_params: Dict[str, Any], nurses_list: List[str], sc
             errors.append(f"❌ Min {shift_type} shifts ({shift_min}) cannot exceed max {shift_type} shifts ({shift_max})")
         
         if shift_max > n1:
-            errors.append(f"❌ Max {shift_type} shifts ({shift_max}) cannot exceed max total shifts (n₁={n1})")
+            errors.append(f"❌ Max {shift_type} shifts ({shift_max}) cannot exceed max total shifts (n1={n1})")
     
     # 3. Check: Nurse list is not empty
     if not nurses_list or len(nurses_list) == 0:
@@ -1299,13 +1339,13 @@ def validate_parameters(model_params: Dict[str, Any], nurses_list: List[str], sc
     q_plus = model_params.get('q_plus', 200.0)
     
     if c2 <= c1:
-        warnings.append(f"⚠️ Overtime cost (c₂=${c2}) should be greater than regular cost (c₁=${c1})")
+        warnings.append(f"⚠️ Overtime cost (c2={c2}) should be greater than regular cost (c1={c1})")
     
     if q_plus <= c2:
-        warnings.append(f"⚠️ Emergency cost (q⁺=${q_plus}) should be greater than overtime cost (c₂=${c2})")
+        warnings.append(f"⚠️ Emergency cost (q_plus={q_plus}) should be greater than overtime cost (c2={c2})")
     
     if q_plus <= c1:
-        warnings.append(f"⚠️ Emergency cost (q⁺=${q_plus}) should be much greater than regular cost (c₁=${c1})")
+        warnings.append(f"⚠️ Emergency cost (q_plus={q_plus}) should be much greater than regular cost (c1={c1})")
     
     # 2. Check: Feasibility - compare capacity vs demand
     if scenarios_df is not None and len(scenarios_df) > 0 and nurses_list:
@@ -1319,7 +1359,7 @@ def validate_parameters(model_params: Dict[str, Any], nurses_list: List[str], sc
         
         if max_daily_demand > total_capacity:
             warnings.append(f"⚠️ Max daily demand ({max_daily_demand:.0f} shifts) exceeds total nurse capacity ({total_capacity} shifts)")
-            warnings.append(f"   → Expect heavy use of emergency staff (high q⁺ costs)")
+            warnings.append(f"   → Expect heavy use of emergency staff (high q_plus costs)")
         
         # Check if average demand is reasonable
         utilization = avg_scenario_demand / total_capacity if total_capacity > 0 else 0
@@ -1332,7 +1372,7 @@ def validate_parameters(model_params: Dict[str, Any], nurses_list: List[str], sc
     if n3 > 0 and n1 > 0:
         min_ratio = n3 / n1
         if min_ratio > 0.8:
-            warnings.append(f"⚠️ Minimum regular shifts (n₃={n3}) is {min_ratio*100:.0f}% of maximum (n₁={n1}) - very tight constraint")
+            warnings.append(f"⚠️ Minimum regular shifts (n3={n3}) is {min_ratio*100:.0f}% of maximum (n1={n1}) - very tight constraint")
     
     # 4. Check: CVaR parameters (if using SDM-CVaR)
     sigma = model_params.get('sigma')
@@ -1340,16 +1380,16 @@ def validate_parameters(model_params: Dict[str, Any], nurses_list: List[str], sc
     
     if sigma is not None:
         if sigma < 0.5 or sigma > 0.99:
-            warnings.append(f"⚠️ Unusual CVaR confidence level (σ={sigma}). Typical range: 0.90-0.99")
+            warnings.append(f"⚠️ Unusual CVaR confidence level (sigma={sigma}). Typical range: 0.90-0.99")
     
     if mu is not None and mu < 0:
-        errors.append(f"❌ CVaR shortage limit (μ={mu}) cannot be negative")
+        errors.append(f"❌ CVaR shortage limit (mu={mu}) cannot be negative")
     
     # 5. Check: Shift quotas might be too restrictive
     if shift_quotas:
         quota_total_min = sum(q.get('min', 0) for q in shift_quotas.values())
         if quota_total_min > n1:
-            warnings.append(f"⚠️ Sum of minimum shift quotas ({quota_total_min}) exceeds max total shifts (n₁={n1})")
+            warnings.append(f"⚠️ Sum of minimum shift quotas ({quota_total_min}) exceeds max total shifts (n1={n1})")
     
     return errors, warnings
 
@@ -1438,12 +1478,10 @@ def estimate_solve_time(nurses_list: List[str], scenarios_df: pd.DataFrame, mode
     # Adjust for number of scenarios (more scenarios = harder)
     if num_scenarios > 20:
         estimated_seconds *= 1.5
-        display += " (many scenarios)"
     
     # Adjust for advanced constraints
     if advanced_multiplier > 1.5:
         estimated_seconds *= 1.3
-        display += " (complex constraints)"
     
     return {
         'num_variables': total_vars,
@@ -1494,7 +1532,7 @@ def validate_results(results: Dict[str, Any], model_params: Dict[str, Any]) -> T
     
     violations_n1 = nurse_total_shifts[nurse_total_shifts > n1]
     if len(violations_n1) > 0:
-        errors.append(f"❌ **Constraint violation:** {len(violations_n1)} nurses exceed max shifts (n₁={n1})")
+        errors.append(f"❌ **Constraint violation:** {len(violations_n1)} nurses exceed max shifts (n1={n1})")
         for nurse, count in violations_n1.items():
             errors.append(f"   - {nurse}: {count} shifts (max={n1})")
     
@@ -1517,7 +1555,7 @@ def validate_results(results: Dict[str, Any], model_params: Dict[str, Any]) -> T
         
         violations_n2 = nurse_night_shifts[nurse_night_shifts > n2]
         if len(violations_n2) > 0:
-            errors.append(f"❌ **Constraint violation:** {len(violations_n2)} nurses exceed max night shifts (n₂={n2})")
+            errors.append(f"❌ **Constraint violation:** {len(violations_n2)} nurses exceed max night shifts (n2={n2})")
             for nurse, count in violations_n2.items():
                 errors.append(f"   - {nurse}: {count} night shifts (max={n2})")
     

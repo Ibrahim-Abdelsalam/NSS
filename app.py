@@ -727,9 +727,9 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
     if problem_size > 5000:
         st.info(f"⚠️ Large problem detected ({len(nurses_list)} nurses × {len(scenarios_df['day'].unique())} days × {len(scenarios_df['scenario'].unique())} scenarios). Solver may find a near-optimal solution (within 5%) for faster results.")
     
-    # Enhanced progress indicator
-    progress_container = st.container()
-    with progress_container:
+    # Enhanced progress indicator (using placeholder for better control)
+    progress_placeholder = st.empty()
+    with progress_placeholder.container():
         st.markdown("""
         <div style="text-align: center; padding: 3rem 2rem; background: #667eea; 
                     border-radius: 16px; color: white; margin: 2rem 0;">
@@ -784,7 +784,7 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
             )
         except MemoryError:
             st.session_state.solve_complete = True
-            progress_container.empty()
+            progress_placeholder.empty()
             
             st.error("❌ **Out of Memory Error**")
             st.error("### The problem is too large for available memory")
@@ -800,7 +800,7 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
             
         except ImportError as e:
             st.session_state.solve_complete = True
-            progress_container.empty()
+            progress_placeholder.empty()
             
             st.error(f"❌ **Import Error:** {e}")
             st.error("### Missing required package")
@@ -817,7 +817,7 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
             error_details = traceback.format_exc()
             
             st.session_state.solve_complete = True
-            progress_container.empty()
+            progress_placeholder.empty()
             
             st.error(f"❌ **Solver Error:** {type(solver_error).__name__}")
             st.error(f"### {str(solver_error)}")
@@ -867,7 +867,7 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
         st.session_state.solve_complete = True
         
         # Clear progress indicator
-        progress_container.empty()
+        progress_placeholder.empty()
         
         if status == "Optimal":
             st.success(f"✅ **Optimization Complete!** Status: **{status}** (Solver: {selected_solver}, Time: {solve_time:.1f}s)")
@@ -888,7 +888,11 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
             # ================================================================
             st.markdown("### ✅ Validating Results...")
             
-            result_errors, result_warnings = m.validate_results(results, model_params)
+            if results is not None:
+                result_errors, result_warnings = m.validate_results(results, model_params)
+            else:
+                result_errors = ["Results extraction returned None"]
+                result_warnings = []
             
             # Display errors (should not happen if solver is correct)
             if result_errors:
@@ -1053,7 +1057,7 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
         
         st.session_state.solve_complete = True
         if 'progress_container' in locals():
-            progress_container.empty()
+            progress_placeholder.empty()
         
         st.error("❌ **Unexpected Error**")
         st.error(f"### {type(e).__name__}: {str(e)}")
@@ -1074,11 +1078,25 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
 # --- 5. DISPLAY RESULTS ---
 if st.session_state.results is not None:
     results = st.session_state.results
+    model_params = st.session_state.get('model_params', {})
     
     # Key Metrics at the top
     st.header("📊 Summary Metrics")
     
-    col1, col2, col3, col4 = st.columns(4)
+    # Calculate demand statistics for better context
+    scenarios_df = st.session_state.get('scenarios_df')
+    nurses_list = st.session_state.get('nurses_list', [])
+    
+    if scenarios_df is not None:
+        total_demand = scenarios_df['demand'].sum()
+        num_scenarios = len(scenarios_df['scenario'].unique())
+        avg_demand_per_scenario = total_demand / num_scenarios
+    else:
+        avg_demand_per_scenario = 0
+    
+    total_assigned = results['cost_breakdown']['total_regular_shifts'] + results['cost_breakdown']['total_overtime_shifts']
+    
+    col1, col2, col3, col4, col5 = st.columns(5)
     
     with col1:
         st.metric(
@@ -1089,24 +1107,39 @@ if st.session_state.results is not None:
     
     with col2:
         st.metric(
-            "Regular Shifts",
-            int(results['cost_breakdown']['total_regular_shifts']),
-            help="Total regular shifts assigned"
+            "Total Demand",
+            f"{avg_demand_per_scenario:.0f}",
+            help="Average total demand per scenario (sum of all day-shift requirements)"
         )
     
     with col3:
         st.metric(
-            "Overtime Shifts",
-            int(results['cost_breakdown']['total_overtime_shifts']),
-            help="Total overtime shifts assigned"
+            "Assigned Shifts",
+            int(total_assigned),
+            help="Total shifts assigned (regular + overtime)"
         )
     
     with col4:
+        if nurses_list and model_params.get('n1'):
+            max_capacity = len(nurses_list) * model_params['n1']
+            capacity_utilization = (total_assigned / max_capacity) * 100
+            help_text = f"Utilization: {total_assigned} / {max_capacity} max shifts"
+        else:
+            capacity_utilization = 0
+            help_text = "Capacity utilization"
+        
+        st.metric(
+            "Capacity Used",
+            f"{capacity_utilization:.1f}%",
+            help=help_text
+        )
+    
+    with col5:
         avg_shortage = results['scenario_df']['shortage_shifts'].mean()
         st.metric(
             "Avg. Shortage",
             f"{avg_shortage:.1f}",
-            help="Average shortage across scenarios"
+            help="Average emergency staff needed per scenario"
         )
     
     st.divider()
@@ -1199,7 +1232,23 @@ if st.session_state.results is not None:
         day_cols = [col for col in roster_df.columns if col.startswith("D") and col[1:].isdigit()]
         heatmap_data = roster_df[["Nurse"] + day_cols].set_index("Nurse")
         
-        # Convert shift labels to numeric for visualization
+        # Convert shift labels to full descriptive names for better readability
+        shift_names = {
+            'OFF': 'Off Day',
+            'E': 'Early Shift',
+            'D': 'Day Shift',
+            'L': 'Late Shift',
+            'N': 'Night Shift',
+            'E (OT)': 'Early (Overtime)',
+            'D (OT)': 'Day (Overtime)',
+            'L (OT)': 'Late (Overtime)',
+            'N (OT)': 'Night (Overtime)'
+        }
+        
+        # Create descriptive heatmap data for display
+        heatmap_display = heatmap_data.replace(shift_names)
+        
+        # Convert shift labels to numeric for color mapping
         shift_map = {'OFF': 0, 'E': 1, 'D': 2, 'L': 3, 'N': 4, 
                      'E (OT)': 1.5, 'D (OT)': 2.5, 'L (OT)': 3.5, 'N (OT)': 4.5}
         
@@ -1214,15 +1263,34 @@ if st.session_state.results is not None:
             aspect="auto",
             title="Nurse Schedule - Color-Coded Heatmap"
         )
+        
+        # Update hover template to show descriptive shift names
+        fig_heatmap.update_traces(
+            customdata=heatmap_display.values,
+            hovertemplate='<b>%{y}</b><br>Day: %{x}<br>Shift: %{customdata}<extra></extra>',
+            xgap=1,  # Add horizontal gap between cells
+            ygap=1   # Add vertical gap between cells
+        )
+        
+        # Update colorbar to show shift type labels instead of numbers
+        fig_heatmap.update_coloraxes(
+            colorbar=dict(
+                tickmode='array',
+                tickvals=[0, 1, 2, 3, 4],
+                ticktext=['Off Day', 'Early', 'Day', 'Late', 'Night']
+            )
+        )
+        
         fig_heatmap.update_layout(
-            height=max(400, len(nurses_list) * 20),
+            height=max(400, len(nurses_list or []) * 20),
             font=dict(size=12),
-            title_font_size=16
+            title_font_size=16,
+            plot_bgcolor='black'  # Set background to black to create grid effect
         )
         st.plotly_chart(fig_heatmap, use_container_width=True)
         
         # Download heatmap as image
-        img_bytes = fig_heatmap.to_image(format="png", width=1400, height=max(600, len(nurses_list) * 25))
+        img_bytes = fig_heatmap.to_image(format="png", width=1400, height=max(600, len(nurses_list or []) * 25))
         st.download_button(
             "⬇️ Download Heatmap (PNG Image)",
             img_bytes,
@@ -1406,7 +1474,7 @@ if st.session_state.results is not None:
         ## Executive Summary
         
         **Optimization Model:** {results['risk_metrics']['model_type']}  
-        **Total Nurses:** {len(nurses_list)}  
+        **Total Nurses:** {len(nurses_list) if nurses_list else 0}  
         **Planning Period:** {len(results['coverage_df']['day'].unique())} days  
         **Demand Scenarios:** {results['risk_metrics']['num_scenarios']}
         
@@ -1504,7 +1572,7 @@ if st.session_state.results is not None:
         story.append(Paragraph("EXECUTIVE SUMMARY", heading_style))
         summary_data = [
             ['Model Type:', results['risk_metrics']['model_type']],
-            ['Total Nurses:', str(len(nurses_list))],
+            ['Total Nurses:', str(len(nurses_list) if nurses_list else 0)],
             ['Planning Period:', f"{len(results['coverage_df']['day'].unique())} days"],
             ['Demand Scenarios:', str(results['risk_metrics']['num_scenarios'])]
         ]
