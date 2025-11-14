@@ -12,12 +12,12 @@ Then open your browser to: **http://localhost:8503**
 
 ## ✅ Everything is Already Installed!
 
-### Solvers Available:
-- ✅ **Gurobi** - Very Fast (10-100× faster than CBC) - **RECOMMENDED**
-- ✅ **CBC** - Slow but free and always available
-- ❌ **CPLEX** - Not installed (optional)
+### Solvers:
+- ✅ **Automatic Selection** - The system picks the best available solver
+- ✅ **HiGHS** - Fast & Free (3-5× faster than CBC) - Preferred
+- ✅ **CBC** - Fallback option (always available)
 
-**Gurobi is pre-configured and ready to use!**
+**The app automatically detects and uses the fastest solver available!**
 
 ---
 
@@ -35,7 +35,7 @@ All constraints have sensible defaults. You can adjust:
 ### Step 3: Run Optimization
 Click **"▶️ RUN OPTIMIZATION"**
 
-Wait 5-30 seconds (Gurobi is fast!)
+Wait 5-30 seconds (HiGHS is fast!)
 
 ### Step 4: View Results
 - See the schedule table
@@ -44,14 +44,15 @@ Wait 5-30 seconds (Gurobi is fast!)
 
 ---
 
-## ⚙️ Solver Selection
+## ⚙️ Automatic Solver Selection
 
-**Default: Gurobi** (already selected)
-- Fastest solver (10-100× faster than CBC)
-- Free academic license (valid until 2027)
-- No additional setup needed
+**The app automatically picks the best solver** - no configuration needed!
 
-**If Gurobi fails, the app automatically falls back to CBC**
+**Priority:**
+1. **HiGHS** - Fast, free, open-source (if installed)
+2. **CBC** - Reliable fallback (always available)
+
+**No manual selection required** - the framework chooses automatically!
 
 ---
 
@@ -71,11 +72,8 @@ This system implements **15 out of 18 constraints** from the research paper:
 
 ## 🐛 Troubleshooting
 
-### Problem: "Cannot execute gurobi_cl"
-**Solution:** Already fixed! The app now uses Gurobi Python API.
-
-### Problem: "Solver not available"
-**Solution:** The app will automatically use CBC as fallback.
+### Problem: "Solver taking too long"
+**Solution:** The app automatically uses HiGHS if available. If you only have CBC, install HiGHS: `pip install highspy`
 
 ### Problem: "Infeasible solution"
 **Solution:** 
@@ -96,19 +94,19 @@ streamlit run app.py
 ## 📊 Performance Tips
 
 ### For Fast Results (5-10 seconds):
-- Use **Gurobi** solver (already selected)
+- HiGHS automatically selected (if installed)
 - 10-20 nurses
 - 7-14 days
 - 5-10 scenarios
 
 ### For Medium Problems (30-60 seconds):
-- Use **Gurobi**
+- HiGHS automatically selected (if installed)
 - 20-30 nurses
 - 14-21 days
 - 10 scenarios
 
 ### For Large Problems (2-5 minutes):
-- Use **Gurobi** (required!)
+- HiGHS automatically selected (if installed)
 - 30-50 nurses
 - 21-28 days
 - 10 scenarios
@@ -123,7 +121,7 @@ streamlit run app.py
 Nurses: 10
 Days: 7
 Scenarios: 5
-Solver: Gurobi
+Solver: Auto (HiGHS preferred)
 Advanced Constraints: None
 ```
 
@@ -132,7 +130,7 @@ Advanced Constraints: None
 Nurses: 20
 Days: 14
 Scenarios: 10
-Solver: Gurobi
+Solver: Auto (HiGHS preferred)
 Weekend Constraints: n₄ = 1
 Night Rest: Enabled (min 2, rest 2)
 ```
@@ -142,7 +140,7 @@ Night Rest: Enabled (min 2, rest 2)
 Nurses: 30
 Days: 21
 Scenarios: 10
-Solver: Gurobi
+Solver: Auto (HiGHS preferred)
 Weekend Constraints: n₄ = 2
 Night Rest: Enabled (min 2, rest 2)
 Shift Quotas: E(2-8), D(2-8), L(2-6), N(2-5)
@@ -152,10 +150,11 @@ Shift Quotas: E(2-8), D(2-8), L(2-6), N(2-5)
 
 ## 💡 Important Notes
 
-1. **Gurobi License**: You have a free restricted license valid until **November 29, 2027**
-2. **No Manual Setup**: Everything is pre-configured
-3. **Auto-Fallback**: If Gurobi fails, CBC is used automatically
-4. **Streamlit Auto-Reload**: Changes to code reload the app automatically
+1. **Automatic Solver Selection**: The system picks the best free solver automatically
+2. **HiGHS Preferred**: If installed, HiGHS is automatically used (3-5× faster than CBC)
+3. **No Manual Setup**: Everything works out of the box
+4. **Auto-Fallback**: If HiGHS isn't installed, CBC is used automatically
+5. **Streamlit Auto-Reload**: Changes to code reload the app automatically
 
 ---
 
@@ -165,7 +164,7 @@ Shift Quotas: E(2-8), D(2-8), L(2-6), N(2-5)
 nurse-scheduler/
 ├── app.py                          # Main Streamlit application
 ├── model.py                        # Optimization model (18 constraints)
-├── solver_config.py                # Solver configuration (Gurobi/CBC/CPLEX)
+├── solver_config.py                # Automatic solver selection framework
 ├── ADVANCED_CONSTRAINTS.md         # Advanced constraints guide
 ├── README.md                       # Full documentation
 ├── QUICKSTART.md                   # Quick start guide

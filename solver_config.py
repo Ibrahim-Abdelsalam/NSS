@@ -1,61 +1,22 @@
 """
 Solver Configuration Module
 
-This module provides flexible solver selection for the nurse scheduling model.
-Supports: CBC (free), Gurobi (free academic), HiGHS (free open-source).
+This module provides intelligent automatic solver selection for the nurse scheduling model.
+Supports only free, open-source solvers: HiGHS (fast - recommended), CBC (slower fallback).
+
+The framework automatically detects and selects the best available solver without user intervention.
 """
 
 import pulp
 
 def get_available_solvers():
     """
-    Detect which solvers are available on this system.
+    Detect which free, open-source solvers are available on this system.
     
     Returns:
         dict: Available solvers with their display names and status
     """
     available = {}
-    
-    # Test CBC (always available with PuLP)
-    try:
-        solver = pulp.PULP_CBC_CMD(msg=False)
-        if solver.available():
-            available['CBC'] = {
-                'name': 'CBC (Open-source)',
-                'speed': 'Slow',
-                'cost': 'Free',
-                'available': True
-            }
-    except:
-        # CBC is always available with PuLP
-        available['CBC'] = {
-            'name': 'CBC (Open-source)',
-            'speed': 'Slow',
-            'cost': 'Free',
-            'available': True
-        }
-    
-    # Test Gurobi - check both Python API and module
-    try:
-        import gurobipy
-        # Also verify PuLP can use it
-        solver = pulp.GUROBI(msg=False)
-        if solver.available():
-            available['GUROBI'] = {
-                'name': 'Gurobi (Commercial/Academic)',
-                'speed': 'Very Fast (10-100× faster)',
-                'cost': 'Free for academic use',
-                'available': True
-            }
-        else:
-            raise Exception("Gurobi not available in PuLP")
-    except (ImportError, Exception):
-        available['GUROBI'] = {
-            'name': 'Gurobi (Not Installed)',
-            'speed': 'Very Fast (10-100× faster)',
-            'cost': 'Free for academic use',
-            'available': False
-        }
     
     # Test HiGHS - modern open-source solver (faster than CBC)
     try:
@@ -65,7 +26,8 @@ def get_available_solvers():
                 'name': 'HiGHS (Open-source)',
                 'speed': 'Fast (3-5× faster than CBC)',
                 'cost': 'Free',
-                'available': True
+                'available': True,
+                'priority': 1  # Highest priority
             }
         else:
             raise Exception("HiGHS not available")
@@ -74,10 +36,59 @@ def get_available_solvers():
             'name': 'HiGHS (Not Installed)',
             'speed': 'Fast (3-5× faster than CBC)',
             'cost': 'Free - pip install highspy',
-            'available': False
+            'available': False,
+            'priority': 1
+        }
+    
+    # Test CBC (always available with PuLP)
+    try:
+        solver = pulp.PULP_CBC_CMD(msg=False)
+        if solver.available():
+            available['CBC'] = {
+                'name': 'CBC (Open-source)',
+                'speed': 'Standard',
+                'cost': 'Free',
+                'available': True,
+                'priority': 2  # Lower priority
+            }
+    except:
+        # CBC is always available with PuLP
+        available['CBC'] = {
+            'name': 'CBC (Open-source)',
+            'speed': 'Standard',
+            'cost': 'Free',
+            'available': True,
+            'priority': 2
         }
     
     return available
+
+
+def auto_select_solver():
+    """
+    Automatically select the best available free solver.
+    
+    Priority order:
+    1. HiGHS (fastest free solver)
+    2. CBC (reliable fallback)
+    
+    Returns:
+        str: Name of the best available solver
+    """
+    available = get_available_solvers()
+    
+    # Filter to only available solvers
+    available_solvers = {name: info for name, info in available.items() if info['available']}
+    
+    if not available_solvers:
+        # This should never happen as CBC is always available
+        return 'CBC'
+    
+    # Sort by priority (lower number = higher priority)
+    sorted_solvers = sorted(available_solvers.items(), key=lambda x: x[1]['priority'])
+    
+    # Return the highest priority solver
+    return sorted_solvers[0][0]
 
 
 def create_solver(solver_name, time_limit, mip_gap, verbose=False):
@@ -85,7 +96,7 @@ def create_solver(solver_name, time_limit, mip_gap, verbose=False):
     Create and configure a solver instance.
     
     Args:
-        solver_name (str): Name of solver ('CBC', 'GUROBI', 'HiGHS')
+        solver_name (str): Name of solver ('HiGHS' [default], 'CBC', or 'AUTO' for auto-selection)
         time_limit (int): Maximum solving time in seconds
         mip_gap (float): MIP gap tolerance (0.0 = optimal, 0.05 = 5% gap)
         verbose (bool): Whether to show solver output
@@ -94,23 +105,12 @@ def create_solver(solver_name, time_limit, mip_gap, verbose=False):
         pulp.Solver: Configured solver instance
     """
     
-    if solver_name == 'GUROBI':
-        # Use GUROBI() Python API instead of GUROBI_CMD (command-line)
-        # Note: GUROBI() accepts parameters directly, not as 'options' list
-        return pulp.GUROBI(
-            msg=verbose,
-            timeLimit=time_limit,
-            mip=True,
-            MIPGap=mip_gap,
-            Threads=8,           # Use 8 threads (adjust based on CPU)
-            Presolve=2,          # Aggressive presolve
-            Cuts=2,              # Aggressive cuts
-            Heuristics=0.2,      # 20% time on heuristics
-            Method=3,            # Concurrent optimizer
-        )
+    # Auto-select best solver if requested
+    if solver_name == 'AUTO' or solver_name is None:
+        solver_name = auto_select_solver()
     
-    elif solver_name == 'HiGHS':
-        # HiGHS - modern open-source solver
+    if solver_name == 'HiGHS':
+        # HiGHS - modern open-source solver (recommended)
         return pulp.HiGHS(
             msg=verbose,
             timeLimit=time_limit,
@@ -127,7 +127,7 @@ def create_solver(solver_name, time_limit, mip_gap, verbose=False):
             msg=verbose,
             timeLimit=time_limit,
             gapRel=mip_gap,
-            threads=8,  # Increased from 4
+            threads=8,
             options=[
                 'preprocess on',
                 'cuts on',
@@ -141,26 +141,14 @@ def create_solver(solver_name, time_limit, mip_gap, verbose=False):
         )
     
     else:
-        # Fallback to HiGHS if available, otherwise CBC
-        try:
-            solver = pulp.HiGHS(msg=False)
-            if solver.available():
-                return pulp.HiGHS(msg=verbose, timeLimit=time_limit, gapRel=mip_gap, threads=8)
-        except:
-            pass
-        
-        # Final fallback to CBC
-        return pulp.PULP_CBC_CMD(
-            msg=verbose,
-            timeLimit=time_limit,
-            gapRel=mip_gap,
-            threads=4
-        )
+        # Fallback: try auto-selection
+        best_solver = auto_select_solver()
+        return create_solver(best_solver, time_limit, mip_gap, verbose)
 
 
 def get_solver_info(solver_name):
     """
-    Get detailed information about a solver.
+    Get detailed information about a free, open-source solver.
     
     Args:
         solver_name (str): Name of solver
@@ -169,16 +157,6 @@ def get_solver_info(solver_name):
         dict: Solver information
     """
     info = {
-        'CBC': {
-            'full_name': 'COIN-OR Branch and Cut',
-            'website': 'https://github.com/coin-or/Cbc',
-            'license': 'EPL (Open Source)',
-            'install': 'Included with PuLP (pip install pulp)',
-            'speed_rating': 1,
-            'typical_speedup': '1× (baseline)',
-            'best_for': 'Small to medium problems (< 20 nurses)',
-            'limitations': 'Slow for large instances',
-        },
         'HiGHS': {
             'full_name': 'HiGHS - High Performance Software for Linear Optimization',
             'website': 'https://highs.dev/',
@@ -187,26 +165,27 @@ def get_solver_info(solver_name):
             'speed_rating': 3,
             'typical_speedup': '3-5× faster than CBC',
             'best_for': 'Small to large problems (5-100 nurses)',
-            'limitations': 'Slower than commercial solvers but free',
+            'limitations': 'None - completely free and fast',
         },
-        'GUROBI': {
-            'full_name': 'Gurobi Optimizer',
-            'website': 'https://www.gurobi.com/',
-            'license': 'Commercial (Free Academic)',
-            'install': 'pip install gurobipy + license',
-            'speed_rating': 10,
-            'typical_speedup': '10-100× faster than CBC',
-            'best_for': 'All problem sizes (5-500 nurses)',
-            'limitations': 'Requires license (free for academics)',
-        }
+        'CBC': {
+            'full_name': 'COIN-OR Branch and Cut',
+            'website': 'https://github.com/coin-or/Cbc',
+            'license': 'EPL (Open Source)',
+            'install': 'Included with PuLP (pip install pulp)',
+            'speed_rating': 1,
+            'typical_speedup': '1× (baseline)',
+            'best_for': 'Small to medium problems (< 20 nurses)',
+            'limitations': 'Slower than HiGHS for large instances',
+        },
     }
     
-    return info.get(solver_name, info['CBC'])
+    return info.get(solver_name, info['HiGHS'])
 
 
 def recommend_solver(num_nurses, num_days, num_scenarios):
     """
-    Recommend the best solver based on problem size.
+    Recommend the best free solver based on problem size.
+    Automatically uses the fastest available free solver.
     
     Args:
         num_nurses (int): Number of nurses
@@ -220,35 +199,27 @@ def recommend_solver(num_nurses, num_days, num_scenarios):
     
     available = get_available_solvers()
     
-    if problem_size < 1000:
-        # Small problems - HiGHS or CBC is fine
-        if available.get('HiGHS', {}).get('available'):
+    # Always prefer HiGHS if available (it's faster and free)
+    if available.get('HiGHS', {}).get('available'):
+        if problem_size < 1000:
             return 'HiGHS', 'Small problem: HiGHS will solve quickly (< 30 seconds)'
+        elif problem_size < 5000:
+            return 'HiGHS', 'Medium problem: HiGHS will solve in 30-60 seconds'
         else:
-            return 'CBC', 'Small problem: CBC will solve quickly (< 1 minute)'
-    
-    elif problem_size < 5000:
-        # Medium problems - prefer Gurobi, then HiGHS, then CBC
-        if available.get('GUROBI', {}).get('available'):
-            return 'GUROBI', 'Medium problem: Gurobi will solve in seconds (vs minutes with CBC)'
-        elif available.get('HiGHS', {}).get('available'):
-            return 'HiGHS', 'Medium problem: HiGHS will solve in 30-60 seconds (3-5× faster than CBC)'
-        else:
-            return 'CBC', 'Medium problem: CBC will work but may take 2-5 minutes. Consider installing HiGHS (pip install highspy) or Gurobi.'
-    
+            return 'HiGHS', 'Large problem: HiGHS recommended (may take 2-5 minutes)'
     else:
-        # Large problems - strongly recommend Gurobi
-        if available.get('GUROBI', {}).get('available'):
-            return 'GUROBI', 'Large problem: Gurobi highly recommended (10-100× faster than CBC)'
-        elif available.get('HiGHS', {}).get('available'):
-            return 'HiGHS', 'Large problem: HiGHS recommended (3-5× faster than CBC). For even faster solving, install Gurobi.'
+        # Fall back to CBC
+        if problem_size < 1000:
+            return 'CBC', 'Small problem: CBC will solve in < 1 minute. For faster results, install HiGHS (pip install highspy)'
+        elif problem_size < 5000:
+            return 'CBC', 'Medium problem: CBC may take 2-5 minutes. Consider installing HiGHS (pip install highspy) for 3-5× speedup'
         else:
-            return 'CBC', '⚠️ Large problem: CBC may take 10-30 minutes. Strongly recommend installing HiGHS or Gurobi (free academic license available)'
+            return 'CBC', '⚠️ Large problem: CBC may take 10-30 minutes. Strongly recommend installing HiGHS (pip install highspy)'
 
 
 def get_installation_instructions(solver_name):
     """
-    Get installation instructions for a solver.
+    Get installation instructions for free, open-source solvers.
     
     Args:
         solver_name (str): Name of solver
@@ -272,7 +243,7 @@ pip install highspy
 python -c "import pulp; print('HiGHS available:', pulp.HiGHS(msg=False).available())"
 ```
 
-**That's it!** Restart the app and select HiGHS from the dropdown.
+**That's it!** Restart the app and HiGHS will be automatically selected.
 
 **Result**: 3-5× faster solving than CBC, completely free! 🚀
 
@@ -280,36 +251,7 @@ python -c "import pulp; print('HiGHS available:', pulp.HiGHS(msg=False).availabl
 - Modern open-source solver (MIT license)
 - Developed at University of Edinburgh
 - Used in production by Google, Meta, and others
-- Great middle ground between CBC and commercial solvers
-        """,
-        
-        'GUROBI': """
-## Install Gurobi (5 minutes)
-
-### Step 1: Get Free Academic License
-1. Go to: https://www.gurobi.com/academia/academic-program-and-licenses/
-2. Register with your .edu email address
-3. You'll receive a license key
-
-### Step 2: Install Gurobi
-```bash
-pip install gurobipy
-```
-
-### Step 3: Activate License
-```bash
-# Run the command provided by Gurobi (example):
-grbgetkey <REDACTED_LICENSE_KEY>
-```
-
-### Step 4: Test
-```bash
-python -c "import gurobipy; print('Gurobi installed!')"
-```
-
-**That's it!** Restart the app and select Gurobi from the dropdown.
-
-**Result**: 10-100× faster solving! 🚀
+- The best free solver available
         """,
         
         'CBC': """
@@ -317,28 +259,32 @@ python -c "import gurobipy; print('Gurobi installed!')"
 
 CBC comes bundled with PuLP, so you're already set up.
 
-### To Improve CBC Performance:
+### To Improve Performance:
 1. The app already uses optimized CBC settings
-2. For even better performance, consider:
-   - Reducing number of scenarios (10 → 5)
-   - Shortening planning period (14 → 7 days)
-   - Or install HiGHS (pip install highspy) for 3-5× speedup
-   - Or install Gurobi for 10-100× speedup
+2. For 3-5× better performance, install HiGHS:
+   ```bash
+   pip install highspy
+   ```
+   The app will automatically detect and use HiGHS!
 
-**Tip**: For large problems (50+ nurses), install Gurobi for much faster results.
+**Tip**: For large problems (50+ nurses), HiGHS provides much faster results.
         """
     }
     
-    return instructions.get(solver_name, instructions['CBC'])
+    return instructions.get(solver_name, instructions['HiGHS'])
 
 
 # Example usage:
 if __name__ == "__main__":
     # Test solver detection
-    print("Available Solvers:")
+    print("Available Free Solvers:")
     for name, info in get_available_solvers().items():
         status = "✅ Ready" if info['available'] else "❌ Not Installed"
         print(f"  {name}: {status} - {info['speed']}")
+    
+    # Test auto-selection
+    best = auto_select_solver()
+    print(f"\nAuto-selected solver: {best}")
     
     # Test recommendation
     solver, reason = recommend_solver(num_nurses=50, num_days=14, num_scenarios=10)

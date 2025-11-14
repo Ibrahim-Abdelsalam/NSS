@@ -258,11 +258,11 @@ with st.sidebar:
         
         col1, col2 = st.columns(2)
         with col1:
-            num_nurses = st.number_input("Number of Nurses", 5, 50, 10, 1)
+            num_nurses = st.number_input("Number of Nurses", 5, 200, 10, 1)
         with col2:
-            num_days = st.number_input("Planning Days", 7, 30, 14, 1)
+            num_days = st.number_input("Planning Days", 7, 90, 14, 1)
         
-        num_scenarios = st.slider("Demand Scenarios", 3, 20, 5, 1)
+        num_scenarios = st.slider("Demand Scenarios", 3, 300, 5, 1)
         
         if st.button("🎲 Generate Sample Data", type="secondary", use_container_width=True):
             nurses_list, scenarios_df = m.generate_sample_data(num_nurses, num_days, num_scenarios)
@@ -290,13 +290,102 @@ with st.sidebar:
         
         if nurse_file and scenario_file:
             try:
+                # ============================================================
+                # LOAD AND VALIDATE NURSE FILE
+                # ============================================================
                 nurses_df = pd.read_csv(nurse_file, header=None)
                 nurses_list = nurses_df.iloc[:, 0].tolist()
-                scenarios_df = pd.read_csv(scenario_file)
+                
+                # Validate nurse list
+                if len(nurses_list) == 0:
+                    st.error("❌ Nurse file is empty!")
+                    st.stop()
+                
+                # Check for duplicates
+                if len(nurses_list) != len(set(nurses_list)):
+                    duplicates = [n for n in nurses_list if nurses_list.count(n) > 1]
+                    st.warning(f"⚠️ Duplicate nurse names found: {set(duplicates)}")
+                
+                # Remove any empty strings
+                nurses_list = [n for n in nurses_list if str(n).strip()]
+                
                 st.success(f"✓ Loaded {len(nurses_list)} nurses")
+                
+                # ============================================================
+                # LOAD AND VALIDATE SCENARIO FILE
+                # ============================================================
+                scenarios_df = pd.read_csv(scenario_file)
+                
+                # Check required columns
+                required_cols = ['scenario', 'day', 'shift', 'demand']
+                missing_cols = [col for col in required_cols if col not in scenarios_df.columns]
+                
+                if missing_cols:
+                    st.error(f"❌ Scenario file missing required columns: {missing_cols}")
+                    st.error(f"**Required columns:** {required_cols}")
+                    st.error(f"**Found columns:** {list(scenarios_df.columns)}")
+                    st.stop()
+                
+                # Check for empty dataframe
+                if len(scenarios_df) == 0:
+                    st.error("❌ Scenario file is empty!")
+                    st.stop()
+                
+                # Check for NaN values
+                if scenarios_df.isnull().any().any():
+                    null_counts = scenarios_df.isnull().sum()
+                    null_cols = null_counts[null_counts > 0]
+                    st.error(f"❌ Scenario file contains missing values:")
+                    for col, count in null_cols.items():
+                        st.error(f"   - {col}: {count} missing values")
+                    st.stop()
+                
+                # Check for negative demands
+                if (scenarios_df['demand'] < 0).any():
+                    negative_rows = scenarios_df[scenarios_df['demand'] < 0]
+                    st.error(f"❌ Found {len(negative_rows)} rows with negative demand!")
+                    st.dataframe(negative_rows.head())
+                    st.stop()
+                
+                # Validate data consistency
+                num_scenarios = len(scenarios_df['scenario'].unique())
+                num_days = len(scenarios_df['day'].unique())
+                num_shifts = len(scenarios_df['shift'].unique())
+                expected_rows = num_scenarios * num_days * num_shifts
+                actual_rows = len(scenarios_df)
+                
+                if actual_rows != expected_rows:
+                    st.warning(f"⚠️ **Data completeness check:**")
+                    st.warning(f"   - Expected rows: {expected_rows} ({num_scenarios} scenarios × {num_days} days × {num_shifts} shifts)")
+                    st.warning(f"   - Actual rows: {actual_rows}")
+                    st.warning(f"   - Missing or extra: {abs(expected_rows - actual_rows)} rows")
+                    
+                    if actual_rows < expected_rows:
+                        st.error("❌ Data appears incomplete! Some scenario/day/shift combinations are missing.")
+                        
+                        # Show which combinations are missing
+                        from itertools import product
+                        all_combos = set(product(
+                            scenarios_df['scenario'].unique(),
+                            scenarios_df['day'].unique(),
+                            scenarios_df['shift'].unique()
+                        ))
+                        actual_combos = set(scenarios_df[['scenario', 'day', 'shift']].itertuples(index=False, name=None))
+                        missing = all_combos - actual_combos
+                        
+                        if len(missing) <= 10:
+                            st.error(f"**Missing combinations:** {missing}")
+                        else:
+                            st.error(f"**{len(missing)} combinations are missing** (showing first 10):")
+                            st.error(str(list(missing)[:10]))
+                
                 st.success(f"✓ Loaded {len(scenarios_df)} demand records")
+                st.info(f"   📊 **Data structure:** {num_scenarios} scenarios × {num_days} days × {num_shifts} shifts")
+                
             except Exception as e:
-                st.error(f"Error loading files: {e}")
+                st.error(f"❌ Error loading files: {e}")
+                st.exception(e)
+                st.stop()
     
     st.divider()
     
@@ -320,6 +409,33 @@ with st.sidebar:
             0.0, 100.0, 15.0, 1.0,
             help="Penalty for bad shift sequences (e.g., Late→Early, Day→Early)"
         )
+    
+    with st.expander("🚨 Recourse Bounds (Optional)", expanded=False):
+        st.caption("Limit emergency staffing and cancellations per shift (leave unchecked for unlimited)")
+        
+        enable_recourse_bounds = st.checkbox(
+            "Enable recourse bounds",
+            value=False,
+            help="Add hard limits on emergency staff and cancellations"
+        )
+        
+        if enable_recourse_bounds:
+            col1, col2 = st.columns(2)
+            with col1:
+                max_emergency_staff = st.number_input(
+                    "Max Emergency Staff per Shift",
+                    1, 20, 5, 1,
+                    help="Maximum additional nurses that can be added per shift (Constraint 17)"
+                )
+            with col2:
+                max_cancellations = st.number_input(
+                    "Max Cancellations per Shift",
+                    1, 20, 3, 1,
+                    help="Maximum shifts that can be cancelled per shift (Constraint 18)"
+                )
+        else:
+            max_emergency_staff = float('inf')
+            max_cancellations = float('inf')
     
     st.header("📋 Work Rules")
     
@@ -449,53 +565,24 @@ with st.sidebar:
     
     st.divider()
     
-    # --- Solver Selection ---
-    st.header("⚡ Solver Configuration")
+    # --- Auto Solver Info (Hidden selection) ---
+    # Automatically select the best available solver without showing UI
+    from solver_config import auto_select_solver
+    selected_solver = auto_select_solver()
     
-    # Detect available solvers
+    # Show a simple info message about which solver is being used
     available_solvers = get_available_solvers()
+    solver_info = available_solvers.get(selected_solver, {})
     
-    # Create solver options list
-    solver_options = []
-    solver_display_names = {}
-    for solver, info in available_solvers.items():
-        if info['available']:
-            display_name = f"{solver} - {info['speed']}"
-            solver_options.append(solver)
-            solver_display_names[solver] = display_name
-        else:
-            display_name = f"{solver} - Not Installed"
-            solver_options.append(solver)
-            solver_display_names[solver] = display_name
-    
-    # Recommend solver based on problem size if data is loaded
-    if nurses_list is not None and scenarios_df is not None:
-        num_nurses = len(nurses_list)
-        num_days = len(scenarios_df['day'].unique())
-        num_scenarios = len(scenarios_df['scenario'].unique())
-        recommended, reason = recommend_solver(num_nurses, num_days, num_scenarios)
-        st.info(f"💡 **Recommended**: {recommended} - {reason}")
-    
-    # Find default solver index (prefer Gurobi if available, then CBC)
-    default_index = 0
-    if 'GUROBI' in solver_options and available_solvers.get('GUROBI', {}).get('available', False):
-        default_index = solver_options.index('GUROBI')
-    elif 'CBC' in solver_options:
-        default_index = solver_options.index('CBC')
-    
-    # Solver selection
-    selected_solver = st.selectbox(
-        "Select Solver",
-        options=solver_options,
-        format_func=lambda x: solver_display_names[x],
-        index=default_index,
-        help="Gurobi is 10-100× faster than CBC and is now installed!"
-    )
-    
-    # Show installation instructions if solver not available
-    if not available_solvers.get(selected_solver, {}).get('available', False):
-        with st.expander("📦 Installation Instructions", expanded=True):
-            st.markdown(get_installation_instructions(selected_solver))
+    with st.expander("ℹ️ Solver Information", expanded=False):
+        st.success(f"**Auto-selected solver**: {selected_solver}")
+        st.info(f"**Speed**: {solver_info.get('speed', 'Unknown')}")
+        st.caption("The system automatically selects the fastest available free solver. HiGHS is preferred over CBC.")
+        
+        # Show installation tip if HiGHS is not available
+        if selected_solver == 'CBC':
+            st.warning("� **Tip**: Install HiGHS for 3-5× faster solving!")
+            st.code("pip install highspy", language="bash")
             st.warning(f"⚠️ {selected_solver} is not installed. Falling back to CBC.")
             selected_solver = 'CBC'  # Fallback
     
@@ -538,7 +625,37 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
         'night_rest_enabled': night_rest_enabled,
         'min_consecutive_nights': min_consecutive_nights,
         'days_off_after_nights': days_off_after_nights,
+        
+        # Recourse bounds (Constraints 17-18 from paper)
+        'max_emergency_staff': max_emergency_staff,
+        'max_cancellations': max_cancellations,
     }
+    
+    # ============================================================================
+    # VALIDATE PARAMETERS BEFORE OPTIMIZATION
+    # ============================================================================
+    st.markdown("### 🔍 Validating Parameters...")
+    
+    errors, warnings = m.validate_parameters(model_params, nurses_list, scenarios_df)
+    
+    # Display errors (blocking)
+    if errors:
+        st.error("### ❌ Validation Errors - Cannot Proceed")
+        for error in errors:
+            st.error(error)
+        st.info("💡 **Fix the errors above and try again.**")
+        st.stop()  # Stop execution - don't run optimization
+    
+    # Display warnings (non-blocking)
+    if warnings:
+        st.warning("### ⚠️ Parameter Warnings")
+        for warning in warnings:
+            st.warning(warning)
+        st.info("💡 **These are warnings, not errors.** The model will still run, but results may not be optimal.")
+    else:
+        st.success("✅ All parameters validated successfully!")
+    
+    st.markdown("")  # Spacing
     
     # Show warning if advanced constraints are enabled
     advanced_enabled = []
@@ -548,22 +665,67 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
         advanced_enabled.append(f"Shift type quotas for {len(shift_quotas)} shift types")
     if night_rest_enabled:
         advanced_enabled.append(f"Night rest rules ({min_consecutive_nights} consecutive, {days_off_after_nights} days off after)")
+    if max_emergency_staff < float('inf') or max_cancellations < float('inf'):
+        bounds_info = []
+        if max_emergency_staff < float('inf'):
+            bounds_info.append(f"max {int(max_emergency_staff)} emergency staff/shift")
+        if max_cancellations < float('inf'):
+            bounds_info.append(f"max {int(max_cancellations)} cancellations/shift")
+        advanced_enabled.append(f"Recourse bounds ({', '.join(bounds_info)})")
     
     if advanced_enabled:
         st.info("🎓 **Advanced Constraints Enabled:**\n" + "\n".join(f"- {item}" for item in advanced_enabled))
         st.warning("⚠️ Advanced constraints may increase solve time and reduce feasibility. If solver fails, try relaxing some constraints.")
+    
+    # ============================================================================
+    # PROBLEM SIZE ESTIMATION
+    # ============================================================================
+    st.markdown("### 📊 Problem Size & Estimated Solve Time")
+    
+    estimation = m.estimate_solve_time(nurses_list, scenarios_df, model_params)
+    
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.metric(
+            "Decision Variables",
+            f"{estimation['num_variables']:,}",
+            help="Total number of decision variables in the optimization model"
+        )
+        st.caption(f"**Dimensions:** {estimation['num_nurses']} nurses × {estimation['num_days']} days × {estimation['num_shifts']} shifts × {estimation['num_scenarios']} scenarios")
+    
+    with col2:
+        st.metric(
+            "Constraints",
+            f"{estimation['num_constraints']:,}",
+            help="Estimated number of constraints"
+        )
+        st.caption(f"**Complexity:** {estimation['time_category']}")
+    
+    with col3:
+        st.metric(
+            "Estimated Time",
+            estimation['time_display'],
+            help="Approximate solve time based on problem size"
+        )
+        
+        # Color-code based on category
+        if estimation['time_category'] == 'Fast':
+            st.success("⚡ Fast problem")
+        elif estimation['time_category'] == 'Medium':
+            st.info("⏱️ Medium problem")
+        elif estimation['time_category'] == 'Slow':
+            st.warning("⏳ Large problem")
+        else:
+            st.error("🐢 Very large problem")
+    
+    st.markdown("")  # Spacing
     
     # Solve
     problem_size = len(nurses_list) * len(scenarios_df['day'].unique()) * len(scenarios_df['scenario'].unique())
     
     if problem_size > 5000:
         st.info(f"⚠️ Large problem detected ({len(nurses_list)} nurses × {len(scenarios_df['day'].unique())} days × {len(scenarios_df['scenario'].unique())} scenarios). Solver may find a near-optimal solution (within 5%) for faster results.")
-    
-    # Double-check solver availability before solving
-    available_solvers_check = get_available_solvers()
-    if not available_solvers_check.get(selected_solver, {}).get('available', False):
-        st.warning(f"⚠️ {selected_solver} is not available. Using CBC instead.")
-        selected_solver = 'CBC'
     
     # Enhanced progress indicator
     progress_container = st.container()
@@ -602,18 +764,105 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
         progress_thread = threading.Thread(target=update_progress, daemon=True)
         progress_thread.start()
     
+    # ============================================================================
+    # SOLVE MODEL WITH COMPREHENSIVE ERROR HANDLING
+    # ============================================================================
     try:
         import time
+        import traceback
         
         # Time the model building and solving
         start_time = time.time()
-        prob, status = m.build_and_solve_model(
-            nurses_list,
-            scenarios_df,
-            model_params,
-            model_type_code,
-            solver_name=selected_solver  # Pass selected solver
-        )
+        
+        try:
+            prob, status = m.build_and_solve_model(
+                nurses_list,
+                scenarios_df,
+                model_params,
+                model_type_code,
+                solver_name=selected_solver  # Pass selected solver
+            )
+        except MemoryError:
+            st.session_state.solve_complete = True
+            progress_container.empty()
+            
+            st.error("❌ **Out of Memory Error**")
+            st.error("### The problem is too large for available memory")
+            st.warning("""
+            **Possible solutions:**
+            1. 🔻 Reduce number of nurses
+            2. 🔻 Reduce planning period (number of days)
+            3. 🔻 Reduce number of scenarios
+            4. 🔻 Disable advanced constraints
+            5. 💻 Try running on a machine with more RAM
+            """)
+            st.stop()
+            
+        except ImportError as e:
+            st.session_state.solve_complete = True
+            progress_container.empty()
+            
+            st.error(f"❌ **Import Error:** {e}")
+            st.error("### Missing required package")
+            st.warning("""
+            **Fix:** Run this command in your terminal:
+            ```bash
+            pip install --upgrade -r requirements.txt
+            ```
+            """)
+            st.stop()
+            
+        except Exception as solver_error:
+            # Log the full error for debugging
+            error_details = traceback.format_exc()
+            
+            st.session_state.solve_complete = True
+            progress_container.empty()
+            
+            st.error(f"❌ **Solver Error:** {type(solver_error).__name__}")
+            st.error(f"### {str(solver_error)}")
+            
+            # Check for common solver issues
+            error_str = str(solver_error).lower()
+            
+            if 'solver' in error_str and 'not found' in error_str:
+                st.warning("""
+                **Solver Not Found**
+                
+                The selected solver is not installed on your system.
+                
+                **Quick Fix:**
+                1. Go back to solver selection
+                2. Choose "AUTO" to automatically select an available solver
+                3. Or install the solver following instructions in the sidebar
+                """)
+            elif 'license' in error_str:
+                st.warning("""
+                **License Error**
+                
+                Commercial solvers (Gurobi, CPLEX) require valid licenses.
+                
+                **Solutions:**
+                1. Use FREE solvers: HiGHS or CBC (select "AUTO")
+                2. Obtain academic license if you're a student/researcher
+                3. Purchase commercial license
+                """)
+            else:
+                # Show expandable error details for debugging
+                with st.expander("🐛 Technical Error Details (for debugging)"):
+                    st.code(error_details, language='python')
+                
+                st.info("""
+                **Troubleshooting Steps:**
+                1. Try reducing problem size
+                2. Try different solver (select "AUTO")
+                3. Check your data for unusual values
+                4. Disable advanced constraints
+                5. Contact support with the error details above
+                """)
+            
+            st.stop()
+        
         solve_time = time.time() - start_time
         st.session_state.solve_complete = True
         
@@ -621,7 +870,6 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
         progress_container.empty()
         
         if status == "Optimal":
-            st.balloons()  # Celebration animation!
             st.success(f"✅ **Optimization Complete!** Status: **{status}** (Solver: {selected_solver}, Time: {solve_time:.1f}s)")
             
             # Extract results
@@ -635,13 +883,193 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
             st.session_state.prob = prob
             st.session_state.model_params = model_params
             
+            # ================================================================
+            # VALIDATE RESULTS
+            # ================================================================
+            st.markdown("### ✅ Validating Results...")
+            
+            result_errors, result_warnings = m.validate_results(results, model_params)
+            
+            # Display errors (should not happen if solver is correct)
+            if result_errors:
+                st.error("### ❌ Result Validation Errors")
+                st.error("**Critical constraint violations detected!** This may indicate a solver bug or model issue.")
+                for error in result_errors:
+                    st.error(error)
+            
+            # Display warnings (potential issues worth noting)
+            if result_warnings:
+                with st.expander("⚠️ Result Validation Warnings (click to expand)"):
+                    for warning in result_warnings:
+                        st.warning(warning)
+            
+            # Show success if no issues
+            if not result_errors and not result_warnings:
+                st.success("✅ All constraints validated - results look good!")
+            elif not result_errors:
+                st.success("✅ All critical constraints satisfied")
+            
+            st.markdown("")  # Spacing
+            
         else:
-            st.error(f"❌ Solver finished with status: **{status}**")
-            st.warning("The model could not find an optimal solution. Try relaxing constraints or checking your data.")
+            # ================================================================
+            # INFEASIBILITY DIAGNOSTICS
+            # ================================================================
+            st.error(f"❌ **Solver Status: {status}**")
+            st.error("### The model could not find an optimal solution.")
+            
+            st.markdown("---")
+            st.warning("### 🔍 Diagnostic Checklist")
+            
+            # Calculate diagnostic metrics
+            num_nurses = len(nurses_list)
+            num_days = len(scenarios_df['day'].unique())
+            num_scenarios = len(scenarios_df['scenario'].unique())
+            total_capacity = num_nurses * n1
+            
+            # Demand analysis
+            total_demand_per_scenario = scenarios_df.groupby('scenario')['demand'].sum()
+            avg_demand = total_demand_per_scenario.mean()
+            max_demand = total_demand_per_scenario.max()
+            
+            # Daily demand (max across all scenarios)
+            max_daily_demand = scenarios_df.groupby(['scenario', 'day'])['demand'].sum().max()
+            
+            # Display diagnostics
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.markdown("#### 📊 Problem Size")
+                st.info(f"""
+                - **Nurses:** {num_nurses}
+                - **Days:** {num_days}  
+                - **Scenarios:** {num_scenarios}
+                - **Total Capacity:** {total_capacity} shifts ({num_nurses} × {n1})
+                """)
+                
+                st.markdown("#### 💼 Demand vs Capacity")
+                utilization = avg_demand / total_capacity * 100 if total_capacity > 0 else 0
+                st.info(f"""
+                - **Average Total Demand:** {avg_demand:.0f} shifts/scenario
+                - **Maximum Total Demand:** {max_demand:.0f} shifts/scenario
+                - **Max Daily Demand:** {max_daily_demand:.0f} shifts/day
+                - **Utilization:** {utilization:.1f}%
+                """)
+                
+                if max_daily_demand > total_capacity:
+                    st.error(f"⚠️ **Max daily demand ({max_daily_demand:.0f}) exceeds capacity ({total_capacity})!**")
+            
+            with col2:
+                st.markdown("#### ⚙️ Constraint Tightness")
+                st.info(f"""
+                - **Max total shifts (n₁):** {n1}
+                - **Min regular shifts (n₃):** {n3}
+                - **Max night shifts (n₂):** {n2}
+                - **Constraint ratio (n₃/n₁):** {n3/n1*100:.0f}%
+                """)
+                
+                if n3/n1 > 0.8:
+                    st.error("⚠️ **Very tight constraint:** n₃ is {:.0f}% of n₁".format(n3/n1*100))
+                
+                # Advanced constraints
+                if n4 > 0:
+                    max_weekends = num_days // 7
+                    st.info(f"""
+                    **Weekend Constraint:**
+                    - Required weekends off: {n4}
+                    - Max possible: {max_weekends}
+                    """)
+                    if n4 > max_weekends:
+                        st.error(f"⚠️ **Impossible:** Need {n4} weekends in {num_days} days!")
+                
+                if shift_quotas:
+                    st.info(f"**Shift Quotas:** {len(shift_quotas)} types constrained")
+                    quota_sum = sum(q.get('min', 0) for q in shift_quotas.values())
+                    if quota_sum > n1:
+                        st.error(f"⚠️ **Quota conflict:** Sum of mins ({quota_sum}) > n₁ ({n1})")
+            
+            st.markdown("---")
+            st.success("### 💡 Suggested Actions")
+            
+            suggestions = []
+            
+            # Suggestion 1: Check capacity
+            if max_daily_demand > total_capacity:
+                suggestions.append("🔴 **Add more nurses** or **increase n₁** (max shifts) - demand exceeds capacity!")
+            
+            # Suggestion 2: Relax min shifts
+            if n3/n1 > 0.7:
+                suggestions.append(f"🟡 **Reduce n₃** (min regular shifts) from {n3} to {int(n1*0.6)} or lower")
+            
+            # Suggestion 3: Relax night shifts
+            if n2/n1 < 0.3:
+                suggestions.append(f"🟡 **Increase n₂** (max night shifts) from {n2} to {int(n1*0.4)} or higher")
+            
+            # Suggestion 4: Weekend constraints
+            if n4 > 0:
+                max_weekends = num_days // 7
+                if n4 >= max_weekends:
+                    suggestions.append(f"🔴 **Reduce n₄** (weekend requirement) from {n4} to {max(0, max_weekends-1)}")
+            
+            # Suggestion 5: Shift quotas
+            if shift_quotas:
+                suggestions.append("🟡 **Disable shift quotas** temporarily to test feasibility")
+            
+            # Suggestion 6: Night rest
+            if night_rest_enabled:
+                suggestions.append("🟡 **Disable night rest constraints** temporarily")
+            
+            # Suggestion 7: Reduce scenarios
+            if num_scenarios > 10:
+                suggestions.append(f"🟢 **Reduce scenarios** from {num_scenarios} to 5-10 for faster testing")
+            
+            # General suggestion
+            suggestions.append("🟢 **Try default parameters** first, then gradually add constraints")
+            
+            for i, suggestion in enumerate(suggestions, 1):
+                st.markdown(f"{i}. {suggestion}")
+            
+            st.markdown("---")
+            st.info("""
+            ### 📚 Understanding Infeasibility
+            
+            **Infeasible** means there's no way to satisfy all constraints simultaneously. Common causes:
+            
+            - **Too much demand** for available nurses
+            - **Conflicting constraints** (e.g., min shifts > max shifts)
+            - **Impossible requirements** (e.g., more weekends off than exist)
+            - **Over-constrained quotas** (too many min/max rules)
+            
+            **Fix approach:**
+            1. Start with minimal constraints
+            2. Add constraints one-by-one
+            3. Test after each addition
+            4. Identify which constraint breaks feasibility
+            """)
             
     except Exception as e:
-        st.error(f"Error during optimization: {e}")
-        st.exception(e)
+        # Final catch-all for unexpected errors
+        import traceback
+        
+        st.session_state.solve_complete = True
+        if 'progress_container' in locals():
+            progress_container.empty()
+        
+        st.error("❌ **Unexpected Error**")
+        st.error(f"### {type(e).__name__}: {str(e)}")
+        
+        error_details = traceback.format_exc()
+        
+        with st.expander("🐛 Full Error Traceback (for debugging)"):
+            st.code(error_details, language='python')
+        
+        st.warning("""
+        **This is an unexpected error. Please:**
+        1. Check the error details above
+        2. Try reducing problem size
+        3. Try using sample data first
+        4. Report this error if it persists
+        """)
 
 # --- 5. DISPLAY RESULTS ---
 if st.session_state.results is not None:
@@ -711,29 +1139,64 @@ if st.session_state.results is not None:
                 height=400
             )
         else:
-            # Hide summary columns
-            day_cols = [col for col in roster_df.columns if col.startswith("Day_")]
+            # Hide summary columns - show only day columns (D1, D2, D3, etc.)
+            day_cols = [col for col in roster_df.columns if col.startswith("D") and col[1:].isdigit()]
             st.dataframe(
                 roster_df[["Nurse"] + day_cols],
                 use_container_width=True,
                 height=400
             )
         
-        # Download roster
-        csv_roster = roster_df.to_csv(index=False)
-        st.download_button(
-            "⬇️ Download Roster (CSV)",
-            csv_roster,
-            "nurse_roster.csv",
-            "text/csv",
-            use_container_width=True
-        )
+        # Download roster - Multiple formats
+        st.subheader("💾 Download Options")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            # CSV download
+            csv_roster = roster_df.to_csv(index=False)
+            st.download_button(
+                "⬇️ CSV Format",
+                csv_roster,
+                "nurse_roster.csv",
+                "text/csv",
+                use_container_width=True
+            )
+        
+        with col2:
+            # Excel download
+            from openpyxl.utils import get_column_letter
+            
+            excel_buffer = BytesIO()
+            with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+                roster_df.to_excel(writer, sheet_name='Roster', index=False)
+                # Auto-adjust column widths
+                worksheet = writer.sheets['Roster']
+                for idx, col in enumerate(roster_df.columns, start=1):
+                    max_length = max(
+                        roster_df[col].astype(str).apply(len).max(),
+                        len(col)
+                    ) + 2
+                    column_letter = get_column_letter(idx)
+                    worksheet.column_dimensions[column_letter].width = min(max_length, 20)
+            
+            st.download_button(
+                "⬇️ Excel Format",
+                excel_buffer.getvalue(),
+                "nurse_roster.xlsx",
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
+            )
+        
+        with col3:
+            # Placeholder for heatmap image (will add after creating the heatmap)
+            st.write("")  # Spacing
         
         # Roster heatmap
         st.subheader("📊 Shift Distribution Heatmap")
         
-        # Prepare data for heatmap
-        day_cols = [col for col in roster_df.columns if col.startswith("Day_")]
+        # Prepare data for heatmap - get day columns (D1, D2, D3, etc.)
+        day_cols = [col for col in roster_df.columns if col.startswith("D") and col[1:].isdigit()]
         heatmap_data = roster_df[["Nurse"] + day_cols].set_index("Nurse")
         
         # Convert shift labels to numeric for visualization
@@ -748,10 +1211,25 @@ if st.session_state.results is not None:
             x=day_cols,
             y=heatmap_data.index,
             color_continuous_scale="RdYlGn_r",
-            aspect="auto"
+            aspect="auto",
+            title="Nurse Schedule - Color-Coded Heatmap"
         )
-        fig_heatmap.update_layout(height=max(400, len(nurses_list) * 20))
+        fig_heatmap.update_layout(
+            height=max(400, len(nurses_list) * 20),
+            font=dict(size=12),
+            title_font_size=16
+        )
         st.plotly_chart(fig_heatmap, use_container_width=True)
+        
+        # Download heatmap as image
+        img_bytes = fig_heatmap.to_image(format="png", width=1400, height=max(600, len(nurses_list) * 25))
+        st.download_button(
+            "⬇️ Download Heatmap (PNG Image)",
+            img_bytes,
+            "nurse_schedule_heatmap.png",
+            "image/png",
+            use_container_width=True
+        )
     
     # ===== TAB 2: COST ANALYSIS =====
     with tabs[1]:
@@ -765,13 +1243,13 @@ if st.session_state.results is not None:
             st.subheader("Stage 1: Baseline Costs")
             st.metric("Regular Shift Costs", f"${cost['stage1_regular_cost']:,.0f}")
             st.metric("Overtime Shift Costs", f"${cost['stage1_overtime_cost']:,.0f}")
-            st.metric("**Stage 1 Total**", f"**${cost['stage1_total']:,.0f}**")
+            st.metric("Stage 1 Total", f"${cost['stage1_total']:,.0f}")
         
         with col2:
             st.subheader("Stage 2: Recourse Costs")
             st.metric("Expected Recourse Cost", f"${cost['stage2_expected_cost']:,.0f}")
             st.metric("Cost per Nurse", f"${cost['avg_cost_per_nurse']:,.0f}")
-            st.metric("**Grand Total**", f"**${cost['total_cost']:,.0f}**")
+            st.metric("Grand Total", f"${cost['total_cost']:,.0f}")
         
         # Cost breakdown pie chart
         st.subheader("📊 Cost Distribution")
@@ -972,54 +1450,242 @@ if st.session_state.results is not None:
             The model successfully controlled the worst-case shortage risk.
             """)
         
-        # Generate downloadable report
-        report_text = f"""
-NURSE SCHEDULING OPTIMIZATION REPORT
-Generated: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}
-
-{'='*60}
-EXECUTIVE SUMMARY
-{'='*60}
-
-Model Type: {results['risk_metrics']['model_type']}
-Total Nurses: {len(nurses_list)}
-Planning Period: {len(results['coverage_df']['day'].unique())} days
-Demand Scenarios: {results['risk_metrics']['num_scenarios']}
-
-{'='*60}
-FINANCIAL SUMMARY
-{'='*60}
-
-Total Cost: ${results['cost_breakdown']['total_cost']:,.2f}
-Stage 1 Cost: ${results['cost_breakdown']['stage1_total']:,.2f}
-  - Regular Wages: ${results['cost_breakdown']['stage1_regular_cost']:,.2f}
-  - Overtime Wages: ${results['cost_breakdown']['stage1_overtime_cost']:,.2f}
-Stage 2 Expected Recourse: ${results['cost_breakdown']['stage2_expected_cost']:,.2f}
-Average Cost per Nurse: ${results['cost_breakdown']['avg_cost_per_nurse']:,.2f}
-
-{'='*60}
-STAFFING SUMMARY
-{'='*60}
-
-Regular Shifts: {int(results['cost_breakdown']['total_regular_shifts'])}
-Overtime Shifts: {int(results['cost_breakdown']['total_overtime_shifts'])}
-Total Shifts: {int(results['cost_breakdown']['total_regular_shifts'] + results['cost_breakdown']['total_overtime_shifts'])}
-
-{'='*60}
-RISK SUMMARY
-{'='*60}
-
-Average Shortage: {results['scenario_df']['shortage_shifts'].mean():.2f} shifts
-Maximum Shortage: {results['scenario_df']['shortage_shifts'].max():.0f} shifts
-Standard Deviation: {results['scenario_df']['shortage_shifts'].std():.2f}
-
-"""
+        # Generate comprehensive downloadable PDF report
+        from reportlab.lib.pagesizes import letter, A4
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.units import inch
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+        from reportlab.lib import colors
+        
+        pdf_buffer = BytesIO()
+        # Narrow margins: 0.5 inch on all sides
+        doc = SimpleDocTemplate(pdf_buffer, pagesize=letter, 
+                               rightMargin=0.5*inch, leftMargin=0.5*inch, 
+                               topMargin=0.5*inch, bottomMargin=0.5*inch)
+        
+        # Container for PDF elements
+        story = []
+        styles = getSampleStyleSheet()
+        
+        # Custom styles
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=20,
+            textColor=colors.HexColor('#1a1a2e'),
+            spaceAfter=12,
+            alignment=1  # Center
+        )
+        
+        heading_style = ParagraphStyle(
+            'CustomHeading',
+            parent=styles['Heading2'],
+            fontSize=14,
+            textColor=colors.HexColor('#667eea'),
+            spaceAfter=6,
+            spaceBefore=12
+        )
+        
+        subheading_style = ParagraphStyle(
+            'CustomSubheading',
+            parent=styles['Heading3'],
+            fontSize=11,
+            textColor=colors.HexColor('#4a5568'),
+            spaceAfter=6,
+            spaceBefore=8
+        )
+        
+        # Title
+        story.append(Paragraph("NURSE SCHEDULING OPTIMIZATION REPORT", title_style))
+        story.append(Paragraph(f"Generated: {pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
+        story.append(Spacer(1, 0.2*inch))
+        
+        # Executive Summary
+        story.append(Paragraph("EXECUTIVE SUMMARY", heading_style))
+        summary_data = [
+            ['Model Type:', results['risk_metrics']['model_type']],
+            ['Total Nurses:', str(len(nurses_list))],
+            ['Planning Period:', f"{len(results['coverage_df']['day'].unique())} days"],
+            ['Demand Scenarios:', str(results['risk_metrics']['num_scenarios'])]
+        ]
+        summary_table = Table(summary_data, colWidths=[2*inch, 2.5*inch])
+        summary_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#e6f2ff')),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey)
+        ]))
+        story.append(summary_table)
+        story.append(Spacer(1, 0.15*inch))
+        
+        # Financial Summary
+        story.append(Paragraph("FINANCIAL SUMMARY", heading_style))
+        financial_data = [
+            ['Total Cost:', f"${results['cost_breakdown']['total_cost']:,.2f}"],
+            ['Stage 1 Cost:', f"${results['cost_breakdown']['stage1_total']:,.2f}"],
+            ['  Regular Wages:', f"${results['cost_breakdown']['stage1_regular_cost']:,.2f}"],
+            ['  Overtime Wages:', f"${results['cost_breakdown']['stage1_overtime_cost']:,.2f}"],
+            ['Stage 2 Recourse:', f"${results['cost_breakdown']['stage2_expected_cost']:,.2f}"],
+            ['Cost per Nurse:', f"${results['cost_breakdown']['avg_cost_per_nurse']:,.2f}"]
+        ]
+        financial_table = Table(financial_data, colWidths=[2*inch, 2.5*inch])
+        financial_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, 0), colors.HexColor('#667eea')),
+            ('TEXTCOLOR', (0, 0), (0, 0), colors.white),
+            ('BACKGROUND', (0, 1), (0, -1), colors.HexColor('#e6f2ff')),
+            ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('FONTNAME', (0, 0), (0, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 1), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey)
+        ]))
+        story.append(financial_table)
+        story.append(Spacer(1, 0.15*inch))
+        
+        # Staffing Summary
+        story.append(Paragraph("STAFFING SUMMARY", heading_style))
+        staffing_data = [
+            ['Regular Shifts:', str(int(results['cost_breakdown']['total_regular_shifts']))],
+            ['Overtime Shifts:', str(int(results['cost_breakdown']['total_overtime_shifts']))],
+            ['Total Shifts:', str(int(results['cost_breakdown']['total_regular_shifts'] + results['cost_breakdown']['total_overtime_shifts']))]
+        ]
+        staffing_table = Table(staffing_data, colWidths=[2*inch, 2.5*inch])
+        staffing_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#e6f2ff')),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey)
+        ]))
+        story.append(staffing_table)
+        story.append(Spacer(1, 0.15*inch))
+        
+        # Risk Summary
+        story.append(Paragraph("RISK SUMMARY", heading_style))
+        risk_data = [
+            ['Average Shortage:', f"{results['scenario_df']['shortage_shifts'].mean():.2f} shifts"],
+            ['Maximum Shortage:', f"{results['scenario_df']['shortage_shifts'].max():.0f} shifts"],
+            ['Std Deviation:', f"{results['scenario_df']['shortage_shifts'].std():.2f}"]
+        ]
+        risk_table = Table(risk_data, colWidths=[2*inch, 2.5*inch])
+        risk_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor('#e6f2ff')),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.black),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey)
+        ]))
+        story.append(risk_table)
+        story.append(PageBreak())
+        
+        # NURSE ROSTER - Full schedule
+        story.append(Paragraph("COMPLETE NURSE ROSTER", heading_style))
+        roster_df = results['roster_df']
+        
+        # Prepare roster data for PDF
+        roster_data = [roster_df.columns.tolist()]  # Header row
+        for _, row in roster_df.iterrows():
+            roster_data.append(row.tolist())
+        
+        # Calculate column widths dynamically
+        num_cols = len(roster_df.columns)
+        available_width = 7.5 * inch  # Total available width with narrow margins
+        col_width = available_width / num_cols
+        col_widths = [col_width] * num_cols
+        
+        roster_table = Table(roster_data, colWidths=col_widths, repeatRows=1)
+        roster_table.setStyle(TableStyle([
+            # Header row
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 7),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            # Data rows
+            ('FONTSIZE', (0, 1), (-1, -1), 6),
+            ('ALIGN', (0, 1), (0, -1), 'LEFT'),  # Nurse names left-aligned
+            ('ALIGN', (1, 1), (-1, -1), 'CENTER'),  # Shifts centered
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            # Alternating row colors
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f7fafc')])
+        ]))
+        story.append(roster_table)
+        story.append(PageBreak())
+        
+        # COVERAGE ANALYSIS
+        story.append(Paragraph("COVERAGE ANALYSIS BY DAY AND SHIFT", heading_style))
+        coverage_df = results['coverage_df']
+        
+        # Pivot coverage data for better display
+        coverage_pivot = coverage_df.pivot(index='day', columns='shift', values='assigned_nurses')
+        coverage_pivot = coverage_pivot.reset_index()
+        
+        # Prepare coverage data
+        coverage_data = [coverage_pivot.columns.tolist()]
+        for _, row in coverage_pivot.iterrows():
+            coverage_data.append(row.tolist())
+        
+        coverage_col_widths = [0.8*inch] + [1.2*inch] * (len(coverage_pivot.columns) - 1)
+        coverage_table = Table(coverage_data, colWidths=coverage_col_widths, repeatRows=1)
+        coverage_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 8),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTSIZE', (0, 1), (-1, -1), 7),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f7fafc')])
+        ]))
+        story.append(coverage_table)
+        story.append(Spacer(1, 0.2*inch))
+        
+        # SCENARIO ANALYSIS
+        story.append(Paragraph("SCENARIO-BY-SCENARIO ANALYSIS", heading_style))
+        scenario_df = results['scenario_df']
+        
+        scenario_data = [['Scenario', 'Shortage Shifts', 'Overage Shifts', 'Recourse Cost']]
+        for _, row in scenario_df.iterrows():
+            scenario_data.append([
+                str(row['scenario']),
+                f"{row['shortage_shifts']:.2f}",
+                f"{row['overage_shifts']:.2f}",
+                f"${row['recourse_cost']:.2f}"
+            ])
+        
+        scenario_table = Table(scenario_data, colWidths=[1.2*inch, 1.5*inch, 1.5*inch, 1.5*inch])
+        scenario_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 8),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTSIZE', (0, 1), (-1, -1), 7),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f7fafc')])
+        ]))
+        story.append(scenario_table)
+        
+        # Build PDF
+        doc.build(story)
         
         st.download_button(
-            "⬇️ Download Full Report (TXT)",
-            report_text,
-            "optimization_report.txt",
-            "text/plain",
+            "⬇️ Download Complete Report (PDF)",
+            pdf_buffer.getvalue(),
+            "nurse_scheduling_complete_report.pdf",
+            "application/pdf",
             use_container_width=True
         )
 

@@ -1,16 +1,18 @@
 # Core optimization
 pulp>=2.7.0
+highspy>=1.5.0 
 
 # Data manipulation
 pandas>=2.0.0
 numpy>=1.24.0
+openpyxl>=3.0.0 
 
 # Web application
 streamlit>=1.28.0
 
 # Visualization
 plotly>=5.17.0
+kaleido>=0.2.1  
 
-# Optional: For enhanced solving (if you want to use commercial solvers)
-# cplex  # Requires IBM CPLEX installation
-# gurobipy  # Requires Gurobi installation
+# PDF generation
+reportlab>=4.0.0  

@@ -9,29 +9,23 @@ A comprehensive two-stage stochastic programming system for nurse scheduling wit
 pip install -r requirements.txt
 ```
 
-### 2. Install a Solver (Choose One)
+### 2. Automatic Solver Selection
 
-**Option A: HiGHS (Recommended - Free & Fast)**
+The system automatically selects the best available free solver:
+
+**HiGHS** (Recommended - installed by default) ⭐
 ```bash
 pip install highspy
 ```
 - ✅ Completely free
-- ✅ No size limits
 - ✅ 3-5× faster than CBC
-- ✅ **Best for most users**
+- ✅ Automatically selected if available
 
-**Option B: Gurobi (Fastest - Free for Academics)**
-```bash
-pip install gurobipy
-```
-Then get free academic license at: https://www.gurobi.com/academia/
-- ✅ 10-100× faster than CBC
-- ✅ Best for large problems (50+ nurses)
-- ⚠️ Requires academic email
+**CBC** (Fallback - included with PuLP)
+- ✅ Always available
+- ✅ Automatically used if HiGHS not installed
 
-**Option C: CBC (Default - Included with PuLP)**
-- Already installed with PuLP
-- Slower but works for small problems
+**No manual selection needed** - the framework chooses automatically!
 
 ### 3. Run the App
 ```bash
@@ -60,7 +54,7 @@ Open browser at: **http://localhost:8501**
 - **Multi-scenario planning** - Handle demand uncertainty
 - **Risk-based optimization** - CVaR (Conditional Value at Risk)
 - **Performance optimization** - Results extraction in <1 second
-- **Multiple solver support** - CBC, HiGHS, Gurobi
+- **Automatic solver selection** - Picks the fastest free solver available
 - **Interactive web UI** - Built with Streamlit
 - **Real-time performance metrics** - Solving time tracking
 
@@ -89,10 +83,12 @@ nurse-scheduler/
 
 ## 🔧 Configuration
 
-### Solver Selection (in the app UI)
-1. **CBC** - Default, slow but reliable
-2. **HiGHS** - Recommended, 3-5× faster than CBC
-3. **Gurobi** - Fastest, requires academic license
+### Automatic Solver Selection
+The system automatically detects and uses the fastest available free solver:
+1. **HiGHS** - Automatically selected if installed (3-5× faster than CBC)
+2. **CBC** - Automatic fallback (always available)
+
+**No configuration needed** - works out of the box!
 
 ### Risk Settings
 - **α (Alpha)**: Confidence level for CVaR (default: 0.95)
