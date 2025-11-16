@@ -1289,15 +1289,21 @@ if st.session_state.results is not None:
         )
         st.plotly_chart(fig_heatmap, use_container_width=True)
         
-        # Download heatmap as image
-        img_bytes = fig_heatmap.to_image(format="png", width=1400, height=max(600, len(nurses_list or []) * 25))
-        st.download_button(
-            "⬇️ Download Heatmap (PNG Image)",
-            img_bytes,
-            "nurse_schedule_heatmap.png",
-            "image/png",
-            use_container_width=True
-        )
+        # Download heatmap as image (optional - requires kaleido package)
+        try:
+            img_bytes = fig_heatmap.to_image(format="png", width=1400, height=max(600, len(nurses_list or []) * 25))
+            st.download_button(
+                "⬇️ Download Heatmap (PNG Image)",
+                img_bytes,
+                "nurse_schedule_heatmap.png",
+                "image/png",
+                use_container_width=True
+            )
+        except (ValueError, ImportError):
+            # Silently skip - kaleido is optional
+            with st.expander("� Want to download heatmap as image?", expanded=False):
+                st.info("Install the optional **kaleido** package to enable PNG export:")
+                st.code("pip install kaleido", language="bash")
     
     # ===== TAB 2: COST ANALYSIS =====
     with tabs[1]:
