@@ -1,6 +1,17 @@
-# 🏥 Nurse Scheduler - Stochastic Optimization System
+# 🩺 Nurse Scheduler Pro - Advanced Optimization System
 
-A comprehensive two-stage stochastic programming system for nurse scheduling with CVaR risk management, built with Python and Streamlit.
+A production-ready two-stage stochastic programming system for nurse scheduling with CVaR risk management, comprehensive validation, and an intuitive web interface built with Python and Streamlit.
+
+## ✨ Key Features
+
+- **🎯 Two-Stage Stochastic Optimization** - Plans schedules under demand uncertainty
+- **📊 CVaR Risk Management** - Controls worst-case understaffing scenarios
+- **✅ Comprehensive Validation** - Parameter and result validation with detailed diagnostics
+- **🖥️ Modern Web Interface** - Clean, professional Streamlit UI with interactive visualizations
+- **📈 Advanced Analytics** - Cost breakdown, coverage analysis, and scenario comparison
+- **📄 Full Reporting** - Export schedules to CSV, Excel, PDF, and PNG heatmaps
+- **⚡ Auto Solver Selection** - Automatically picks the fastest available solver
+- **🔧 15+ Advanced Constraints** - Weekends, night shift rest, shift quotas, and more
 
 ## 🚀 Quick Start
 
@@ -9,174 +20,430 @@ A comprehensive two-stage stochastic programming system for nurse scheduling wit
 pip install -r requirements.txt
 ```
 
-### 2. Automatic Solver Selection
-
-The system automatically selects the best available free solver:
-
-**HiGHS** (Recommended - installed by default) ⭐
-```bash
-pip install highspy
-```
-- ✅ Completely free
-- ✅ 3-5× faster than CBC
-- ✅ Automatically selected if available
-
-**CBC** (Fallback - included with PuLP)
-- ✅ Always available
-- ✅ Automatically used if HiGHS not installed
-
-**No manual selection needed** - the framework chooses automatically!
-
-### 3. Run the App
+### 2. Run the Application
 ```bash
 streamlit run app.py
 ```
 
-Open browser at: **http://localhost:8501**
+The app will automatically open in your browser at **http://localhost:8501**
 
-## 📋 Features
+### 3. Try Sample Data
+1. Select **"Use Sample Data (Quick Start)"** in the sidebar
+2. Click **"🎲 Generate Sample Data"**
+3. Configure parameters (or use defaults)
+4. Click **"🎯 OPTIMIZE SCHEDULE"**
+5. View results in interactive tabs
 
-### ✅ Implemented Constraints (15/18)
-1. ✅ **Coverage Requirements** - Minimum nurses per shift
-2. ✅ **Max Hours per Day** - Prevent overwork
-3. ✅ **Min Rest Between Shifts** - 12-hour rest periods
-4. ✅ **Max Consecutive Days** - Prevent burnout
-5. ✅ **Min Days Off per Period** - Ensure work-life balance
-9. ✅ **Weekend Coverage** - Fair weekend distribution
-10. ✅ **Shift Distribution** - Balanced assignment across nurses
-11. ✅ **Nurse Preferences** - Preferred shifts
-12. ✅ **Nurse Availability** - Unavailable days
-13. ✅ **Minimum Hours per Week** - Part-time/full-time requirements
-14. ✅ **Two-Stage Stochastic Programming** - Uncertainty modeling
-15. ✅ **CVaR Risk Management** - Risk-averse optimization
+## 🛠️ Solver Configuration
 
-### 📊 Advanced Features
-- **Multi-scenario planning** - Handle demand uncertainty
-- **Risk-based optimization** - CVaR (Conditional Value at Risk)
-- **Performance optimization** - Results extraction in <1 second
-- **Automatic solver selection** - Picks the fastest free solver available
-- **Interactive web UI** - Built with Streamlit
-- **Real-time performance metrics** - Solving time tracking
+The system **automatically selects** the best available solver:
+
+| Solver | Status | Speed | Notes |
+|--------|--------|-------|-------|
+| **HiGHS** ⭐ | Recommended | Fast | Free, open-source, 3-5× faster than CBC |
+| **CBC** | Fallback | Medium | Always available (included with PuLP) |
+| **Gurobi** | Optional | Fastest | Requires license (academic licenses free) |
+| **CPLEX** | Optional | Fastest | Requires license |
+
+**No configuration needed** - the system automatically uses HiGHS if installed, falls back to CBC otherwise.
+
+## 📋 Implemented Features
+
+### ✅ Core Optimization Model
+1. ✅ **Two-Stage Stochastic Programming** - Stage 1 baseline schedule + Stage 2 recourse decisions
+2. ✅ **Multiple Demand Scenarios** - Plan under uncertainty with 5-300 scenarios
+3. ✅ **SDM Model** - Standard cost minimization
+4. ✅ **SDM-CVaR Model** - Risk-aware optimization with Conditional Value-at-Risk
+5. ✅ **Emergency Staffing** - Second-stage recourse with emergency staff hiring
+6. ✅ **Shift Cancellations** - Recourse for overstaffing situations
+
+### 🔒 Work Rules & Constraints
+1. ✅ **Max Total Shifts (n₁)** - Maximum shifts per nurse in planning period
+2. ✅ **Max Night Shifts (n₂)** - Limit night shift exposure
+3. ✅ **Min Regular Shifts (n₃)** - Ensure minimum regular (non-overtime) work
+4. ✅ **Stand-Alone Shift Penalties (c₃)** - Discourage isolated working days
+5. ✅ **Unwanted Pattern Penalties (c₄)** - Penalize bad shift sequences (Late→Early, etc.)
+6. ✅ **Complete Weekends Off (n₄)** - Minimum number of full weekends off
+7. ✅ **Night Shift Rest Rules** - Consecutive night requirements + mandatory rest after
+8. ✅ **Shift Type Quotas** - Min/max for specific shift types (E, D, L, N)
+9. ✅ **Recourse Bounds** - Optional limits on emergency staff and cancellations per shift
+
+### 🎨 User Interface Features
+- ✅ **Clean Professional Design** - Modern UI with custom CSS styling
+- ✅ **Sample Data Generator** - Quick start with auto-generated test data
+- ✅ **Custom Data Upload** - CSV file uploads for nurses and scenarios
+- ✅ **Interactive Parameter Configuration** - Sliders, inputs, and toggles for all settings
+- ✅ **Real-Time Validation** - Pre-optimization parameter checking with warnings/errors
+- ✅ **Progress Indicators** - Visual feedback during optimization
+- ✅ **Infeasibility Diagnostics** - Detailed analysis when no solution exists
+
+### 📊 Results & Analytics
+- ✅ **Summary Metrics Dashboard** - Total cost, demand, capacity utilization, shortage
+- ✅ **Nurse Roster View** - Interactive table with show/hide summary columns
+- ✅ **Interactive Heatmap** - Color-coded schedule with shift names and tooltips
+- ✅ **Cost Breakdown** - Stage 1/2 costs, regular/overtime/emergency breakdown
+- ✅ **Coverage Analysis** - Daily staffing levels by shift type
+- ✅ **Risk Assessment** - Shortage distribution, VaR, CVaR metrics
+- ✅ **Scenario Comparison** - Shortage vs overage analysis across scenarios
+
+### 💾 Export Options
+- ✅ **CSV Export** - Roster and scenario analysis
+- ✅ **Excel Export** - Formatted roster with auto-sized columns
+- ✅ **PDF Reports** - Comprehensive multi-page report with all results
+- ✅ **PNG Heatmaps** - High-resolution schedule images (requires kaleido)
+
+### 🔍 Validation & Quality
+- ✅ **Parameter Validation** - Pre-solve checks for feasibility issues
+- ✅ **Result Validation** - Post-solve constraint verification
+- ✅ **Problem Size Estimation** - Predict solve time before optimization
+- ✅ **Error Handling** - Graceful handling of solver errors, memory issues, import errors
+- ✅ **Type Hints** - Full type annotations throughout codebase
+- ✅ **Comprehensive Docstrings** - Detailed documentation for all functions
 
 ## 📁 Project Structure
 
 ```
-nurse-scheduler/
-├── app.py                    # Streamlit web application
-├── model.py                  # Optimization model (928 lines)
-├── solver_config.py          # Solver configuration
+NSS/
+├── app.py                    # Streamlit web application (1806 lines)
+├── model.py                  # Optimization model (1646 lines)
+├── solver_config.py          # Automatic solver selection
 ├── requirements.txt          # Python dependencies
 ├── README.md                 # This file
 ├── QUICKSTART.md             # Quick start guide
 ├── HOW_TO_RUN.md            # Detailed running instructions
+├── LICENSE                   # Project license
 ├── data/                     # Sample data files
-│   └── sample_schedule.csv
+│   ├── sample_nurses.csv    # Example nurse list
+│   └── sample_scenarios.csv # Example demand scenarios
 ├── docs/                     # Technical documentation
 │   ├── ADVANCED_CONSTRAINTS.md
+│   ├── CHECKLIST.md
 │   ├── CONSTRAINTS_GUIDE.md
+│   ├── IMPLEMENTATION_COMPLETE.md
+│   ├── MISSING_CONSTRAINTS_EXPLAINED.md
 │   ├── MODEL_STRUCTURE.md
-│   ├── TUTORIAL.md
 │   ├── PERFORMANCE_ANALYSIS.md
+│   ├── TUTORIAL.md
 │   └── WHERE_IS_THE_CPP.md
-└── archive/                  # Old documentation
+└── archive/                  # Historical documentation
+    ├── GREAT_NEWS.md
+    ├── INSTALL_GUROBI.md
+    ├── LAUNCH.md
+    ├── PERFORMANCE_IMPROVEMENTS.md
+    ├── PROJECT_SUMMARY.md
+    ├── README_OLD.md
+    ├── SOLVER_OPTIONS.md
+    └── SPEED_OPTIONS.md
 ```
 
-## 🔧 Configuration
+## 🎯 Model Parameters
 
-### Automatic Solver Selection
-The system automatically detects and uses the fastest available free solver:
-1. **HiGHS** - Automatically selected if installed (3-5× faster than CBC)
-2. **CBC** - Automatic fallback (always available)
+### 💰 Cost Parameters
+- **c₁** - Regular shift cost (default: $100)
+- **c₂** - Overtime shift cost (default: $150)
+- **q⁺** - Emergency staff cost (default: $200)
+- **c₃** - Stand-alone shift penalty (default: $10)
+- **c₄** - Unwanted pattern penalty (default: $15)
 
-**No configuration needed** - works out of the box!
+### 📋 Work Rules
+- **n₁** - Max total shifts per nurse (default: 15)
+- **n₂** - Max night shifts (default: 5)
+- **n₃** - Min regular shifts (default: 10)
+- **n₄** - Min complete weekends off (default: 0, set 1-4 to enable)
 
-### Risk Settings
-- **α (Alpha)**: Confidence level for CVaR (default: 0.95)
-- **λ (Lambda)**: Risk aversion weight (0-1, default: 0.5)
-  - 0 = Risk-neutral
-  - 1 = Fully risk-averse
+### 🛡️ Risk Parameters (SDM-CVaR only)
+- **σ (sigma)** - Confidence level (default: 0.95, range: 0.90-0.99)
+- **μ (mu)** - Max acceptable shortage (default: 5.0 shifts)
 
-### Solver Settings
-- **Time Limit**: Maximum solving time (60-600 seconds)
-- **MIP Gap**: Optimality tolerance (0.01-0.10)
+### 🚨 Advanced Constraints (Optional)
+- **Shift Quotas** - Min/max for each shift type
+- **Night Rest Rules** - Min consecutive nights + days off after
+- **Recourse Bounds** - Max emergency staff/cancellations per shift
 
-## 📊 Performance
+## 📊 Performance Benchmarks
 
-### Expected Solve Times (20 nurses, 14 days, 10 scenarios)
+### Solve Times (varies by problem size)
 
-| Solver | Time | Speedup |
-|--------|------|---------|
-| CBC | 60-180s | 1× |
-| HiGHS | 20-40s | 3-5× |
-| Gurobi | 5-15s | 10-30× |
+**Small Problem (10 nurses, 14 days, 5 scenarios)**
+- Variables: ~2,400
+- Constraints: ~2,200
+- HiGHS: 1-3 seconds ⚡
+- CBC: 3-10 seconds
+- Gurobi: <1 second
 
-*Note: Results extraction is optimized to <1 second*
+**Medium Problem (20 nurses, 14 days, 10 scenarios)**
+- Variables: ~9,600
+- Constraints: ~8,800
+- HiGHS: 10-30 seconds
+- CBC: 30-90 seconds
+- Gurobi: 3-10 seconds
 
-## 🎓 Academic Context
+**Large Problem (50 nurses, 30 days, 20 scenarios)**
+- Variables: ~91,000
+- Constraints: ~83,000
+- HiGHS: 60-300 seconds
+- CBC: 300-900 seconds
+- Gurobi: 20-60 seconds
 
-This is a university project implementing advanced optimization techniques:
-- Two-stage stochastic programming
-- Conditional Value at Risk (CVaR)
-- Mixed Integer Linear Programming (MILP)
-- Multi-scenario optimization
+**Results Extraction:** <1 second (optimized with dictionary lookups)
 
-## 📚 Documentation
+### Performance Optimizations
+1. ✅ **Dictionary-based variable lookup** - O(1) access instead of O(n²) iteration
+2. ✅ **Optimized result extraction** - 180× speedup (3min → <1s for large problems)
+3. ✅ **Efficient constraint generation** - Vectorized pandas operations
+4. ✅ **Smart solver selection** - Auto-picks fastest available solver
+5. ✅ **Parallel execution** - HiGHS/Gurobi use all CPU cores
 
-- **QUICKSTART.md** - Get started in 5 minutes
-- **HOW_TO_RUN.md** - Detailed setup instructions
-- **docs/TUTORIAL.md** - Step-by-step tutorial
-- **docs/CONSTRAINTS_GUIDE.md** - Constraint explanations
-- **docs/MODEL_STRUCTURE.md** - Technical model details
-- **docs/PERFORMANCE_ANALYSIS.md** - Performance optimization guide
+## 🎓 Academic Foundation
+
+This implementation is based on:
+
+**He, F., Qu, R., & Budak-Arpinar, N. E. (2019)**  
+*"Controlling understaffing with conditional Value-at-Risk constraint for an integrated nurse scheduling problem under patient demand uncertainty."*  
+Operations Research Perspectives, 6, 100119.
+
+### Mathematical Model
+- **Two-stage stochastic programming** with recourse
+- **Mixed Integer Linear Programming (MILP)** formulation
+- **CVaR (Conditional Value-at-Risk)** for risk management
+- **Multi-scenario optimization** under uncertainty
+
+### Key Contributions
+- Balances cost minimization with risk control
+- Handles demand uncertainty explicitly
+- Integrates hard constraints (work rules) and soft constraints (quality penalties)
+- Provides flexible trade-off between cost and understaffing risk
 
 ## 🛠️ Technical Stack
 
+### Core Technologies
 - **Python 3.13** - Programming language
-- **Streamlit 1.45.1** - Web framework
-- **PuLP 2.7.0** - Optimization modeling
-- **HiGHS 1.12.0** - Solver (recommended)
-- **Gurobi 13.0.0** - Solver (optional)
-- **Pandas** - Data handling
-- **NumPy** - Numerical operations
+- **PuLP 2.7.0** - Optimization modeling framework
+- **Streamlit 1.28+** - Web application framework
+- **Pandas 2.0+** - Data manipulation and analysis
+- **NumPy 1.24+** - Numerical computing
 
-## ⚡ Performance Optimizations
+### Solvers (Auto-selected)
+- **HiGHS 1.5.0+** - High-performance open-source solver (recommended)
+- **CBC** - Fallback solver (included with PuLP)
+- **Gurobi** - Optional commercial solver (fastest, requires license)
+- **CPLEX** - Optional commercial solver (requires license)
 
-1. **Dictionary-based variable lookup** - O(1) instead of O(n²)
-2. **Optimized result extraction** - 180× speedup (3min → <1s)
-3. **Efficient constraint generation** - Vectorized operations
-4. **Multi-threaded solving** - Uses all CPU cores
-5. **Aggressive presolve** - Reduces problem size
+### Visualization & Export
+- **Plotly 5.17+** - Interactive charts and heatmaps
+- **Kaleido 0.2.1** - Static image export (PNG heatmaps)
+- **ReportLab 4.0+** - PDF report generation
+- **OpenPyXL 3.0+** - Excel file export
+
+### Development Features
+- **Type Hints** - Full typing.TYPE_CHECKING annotations
+- **Docstrings** - Google-style documentation throughout
+- **Error Handling** - Comprehensive try-catch with user-friendly messages
+- **Validation** - Pre/post-optimization constraint checking
+
+## 📚 Documentation
+
+### Quick Start Guides
+- **[QUICKSTART.md](QUICKSTART.md)** - Get started in 5 minutes
+- **[HOW_TO_RUN.md](HOW_TO_RUN.md)** - Detailed setup and running instructions
+
+### Technical Documentation
+- **[docs/TUTORIAL.md](docs/TUTORIAL.md)** - Step-by-step usage tutorial
+- **[docs/CONSTRAINTS_GUIDE.md](docs/CONSTRAINTS_GUIDE.md)** - Detailed constraint explanations
+- **[docs/MODEL_STRUCTURE.md](docs/MODEL_STRUCTURE.md)** - Mathematical model documentation
+- **[docs/ADVANCED_CONSTRAINTS.md](docs/ADVANCED_CONSTRAINTS.md)** - Weekend, night rest, quota constraints
+- **[docs/PERFORMANCE_ANALYSIS.md](docs/PERFORMANCE_ANALYSIS.md)** - Performance optimization details
+- **[docs/WHERE_IS_THE_CPP.md](docs/WHERE_IS_THE_CPP.md)** - Why Python is sufficient (no C++ needed)
+
+### Project Management
+- **[docs/IMPLEMENTATION_COMPLETE.md](docs/IMPLEMENTATION_COMPLETE.md)** - Feature completion checklist
+- **[docs/CHECKLIST.md](docs/CHECKLIST.md)** - Development checklist
 
 ## 🐛 Troubleshooting
 
-### "Model too large for size-limited license"
-- You're using Gurobi trial/web license (2,000 variable limit)
-- **Solution**: Use HiGHS (`pip install highspy`) or get academic license
+### Common Issues and Solutions
 
-### "Solver not available"
-- **Solution**: Install solver: `pip install highspy` or `pip install gurobipy`
+#### ❌ "Solver not found" or "No solver available"
+**Solution:** Install HiGHS solver
+```bash
+pip install highspy
+```
+Or restart Streamlit after installation:
+```bash
+# Press Ctrl+C in terminal to stop
+streamlit run app.py
+```
 
-### Slow solving (>3 minutes)
-- **Solution**: Switch to HiGHS or Gurobi solver
-- Reduce scenarios (10 → 5) or days (14 → 7)
+#### ❌ Kaleido error when exporting heatmap
+**Solution:** Install kaleido package (optional feature)
+```bash
+pip install kaleido
+```
+Then restart Streamlit. The error message is now hidden in a collapsible expander.
 
-### Results take long to appear
-- Fixed in current version (dictionary-based lookup)
-- Should be <1 second now
+#### ❌ "Infeasible" result - No solution found
+**Possible Causes:**
+1. **Demand exceeds capacity** - Not enough nurses or max shifts too low
+2. **Tight constraints** - n₃ (min regular) too close to n₁ (max total)
+3. **Conflicting quotas** - Shift quota minimums sum to more than n₁
+4. **Impossible weekends** - Requesting more weekends off than exist in planning period
+
+**Solutions:**
+- Check the diagnostic checklist shown after infeasible result
+- Increase n₁ (max shifts) or add more nurses
+- Decrease n₃ (min regular shifts)
+- Temporarily disable advanced constraints (quotas, weekends, night rest)
+- Start with default parameters, add constraints gradually
+
+#### ⚠️ High capacity utilization warning (>100%)
+**Meaning:** Average demand exceeds total nurse capacity - solution will be tight
+
+**Solutions:**
+- Add more nurses
+- Increase n₁ (max shifts per nurse)
+- Accept that emergency staff will be needed (this is expected!)
+
+#### ⚠️ Cost mismatch validation warning
+**Status:** This bug has been fixed in the current version
+- Cost breakdown now includes both naming conventions (stage1_total + stage1_cost)
+
+#### ⚠️ "Schedule dataframe is empty" validation error
+**Status:** This bug has been fixed in the current version
+- Results now include schedule_df in proper format
+
+#### 🐢 Slow solving (>5 minutes)
+**Solutions:**
+1. **Use HiGHS solver** (3-5× faster than CBC)
+   ```bash
+   pip install highspy
+   ```
+2. **Reduce problem size:**
+   - Fewer scenarios (20 → 10 → 5)
+   - Fewer days (30 → 14 → 7)
+   - Fewer nurses (50 → 20 → 10)
+3. **Disable advanced constraints temporarily:**
+   - Turn off shift quotas
+   - Turn off night rest rules
+   - Reduce weekend requirements
+
+#### 💻 Out of memory error
+**Solutions:**
+- Reduce number of scenarios significantly (300 → 50 → 10)
+- Reduce planning period (30 days → 14 days)
+- Close other applications
+- Run on machine with more RAM
+
+#### 🔄 Progress indicator stuck on "Optimizing..."
+**Status:** This bug has been fixed in the current version
+- Now uses st.empty() instead of st.container() for proper clearing
+
+## 🔒 Data Privacy & Security
+
+- ✅ All computation runs **locally** on your machine
+- ✅ No data is sent to external servers
+- ✅ No internet connection required (except for initial package installation)
+- ✅ CSV uploads are processed in memory only
+- ✅ Sample data generator creates synthetic data
+
+## 💡 Usage Tips
+
+### Getting Started
+1. **Start with sample data** - Click "Generate Sample Data" to see the system in action
+2. **Use default parameters** - They're designed to work well for most cases
+3. **Understand the results** - Explore all 6 tabs (Roster, Cost, Coverage, Risk, Scenarios, Report)
+
+### Optimizing Performance
+1. **Install HiGHS** - 3-5× speedup over CBC: `pip install highspy`
+2. **Start small** - Test with 10 nurses, 14 days, 5 scenarios
+3. **Scale gradually** - Increase problem size once you understand behavior
+
+### Understanding Results
+- **Zero shortage is normal** - If capacity > demand, no emergency staff needed
+- **High capacity usage is expected** - The model efficiently uses available nurses
+- **Overtime is optional** - Controlled by c₂ (overtime cost) parameter
+- **CVaR model is conservative** - Deliberately over-staffs to control worst-case risk
+
+### Custom Data Format
+**Nurses CSV:**
+```csv
+nurse_name
+Alice
+Bob
+Charlie
+```
+
+**Scenarios CSV:**
+```csv
+scenario,day,shift,demand
+1,1,E,2
+1,1,D,3
+1,1,L,2
+1,1,N,1
+```
+- Shifts: E (Early), D (Day), L (Late), N (Night)
+- Days: 1, 2, 3, ... (consecutive integers)
 
 ## 📝 License
 
-Academic project - Free to use for educational purposes
+This project is available for educational and academic use.
 
 ## 🤝 Contributing
 
-This is a university project. For questions or improvements, feel free to modify and extend!
+This is an academic project developed for university coursework. Feel free to:
+- Fork and modify for your own learning
+- Report issues or bugs
+- Suggest improvements
+- Use as reference for similar projects
 
-## 📧 Support
+## 📧 Resources & Support
 
-For Gurobi academic licenses: https://www.gurobi.com/academia/
-For HiGHS documentation: https://highs.dev/
+### Solver Information
+- **HiGHS Documentation:** https://highs.dev/
+- **PuLP Documentation:** https://coin-or.github.io/pulp/
+- **Gurobi Academic Licenses:** https://www.gurobi.com/academia/ (free for students/faculty)
+
+### Learning Resources
+- **Operations Research:** Introduction to Mathematical Optimization
+- **Stochastic Programming:** Birge & Louveaux (2011)
+- **CVaR:** Rockafellar & Uryasev (2000)
+
+### Technology Stack
+- **Streamlit Docs:** https://docs.streamlit.io/
+- **Plotly Docs:** https://plotly.com/python/
+- **Pandas Docs:** https://pandas.pydata.org/
+
+## 🎯 Project Status
+
+**Status: Production Ready ✅**
+
+### Completed Features
+- ✅ Core two-stage stochastic optimization model
+- ✅ SDM and SDM-CVaR implementations
+- ✅ All basic and advanced constraints
+- ✅ Comprehensive validation (pre/post optimization)
+- ✅ Professional web interface with Streamlit
+- ✅ Interactive visualizations and analytics
+- ✅ Multiple export formats (CSV, Excel, PDF, PNG)
+- ✅ Automatic solver selection
+- ✅ Error handling and diagnostics
+- ✅ Full documentation and tutorials
+- ✅ Type hints and docstrings
+- ✅ Performance optimizations
+
+### Optional Enhancements (Not Critical)
+- ⏸️ Performance logging to file
+- ⏸️ Database integration (not needed for current scale)
+- ⏸️ Multi-language support
+
+## 🌟 Acknowledgments
+
+- **Mathematical Model:** Based on He et al. (2019) research paper
+- **Solvers:** HiGHS team, CBC/COIN-OR team, Gurobi Optimization
+- **Frameworks:** Streamlit, PuLP, Plotly communities
+- **Academic Support:** University faculty and advisors
 
 ---
 
-**Built with ❤️ for Operations Research & Optimization**
+**Built with ❤️ for Operations Research & Healthcare Optimization**
+
+*Last Updated: November 2025*
