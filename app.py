@@ -11,7 +11,7 @@ from solver_config import get_available_solvers, recommend_solver, get_installat
 
 # --- 1. PAGE CONFIGURATION ---
 st.set_page_config(
-    page_title="Nurse Scheduler Pro", 
+    page_title="Nurse Scheduler", 
     page_icon="🩺", 
     layout="wide",
     initial_sidebar_state="expanded"
@@ -382,6 +382,10 @@ with st.sidebar:
                 st.success(f"✓ Loaded {len(scenarios_df)} demand records")
                 st.info(f"   📊 **Data structure:** {num_scenarios} scenarios × {num_days} days × {num_shifts} shifts")
                 
+                # Store in session state for use in results display
+                st.session_state.nurses_list = nurses_list
+                st.session_state.scenarios_df = scenarios_df
+                
             except Exception as e:
                 st.error(f"❌ Error loading files: {e}")
                 st.exception(e)
@@ -393,14 +397,11 @@ with st.sidebar:
     st.header("💰 Cost Parameters")
     
     with st.expander("💵 Wage Costs", expanded=True):
-        c1 = st.number_input("Regular Shift Cost ($c_1$)", 50.0, 500.0, 100.0, 10.0)
-        c2 = st.number_input("Overtime Shift Cost ($c_2$)", 50.0, 500.0, 150.0, 10.0)
-        q_plus = st.number_input("Emergency Shift Cost ($q^+$)", 100.0, 1000.0, 200.0, 10.0)
-        q_minus = st.number_input(
-            "Shift Cancellation Cost ($q^-$)", 
-            0.0, 100.0, 0.0, 1.0,
-            help="Cost of cancelling a planned shift (usually 0, but may represent wasted planning effort or contractual penalties). Paper uses q⁻=2."
-        )
+        c1 = st.number_input("Regular Shift Cost ($c_1$)", 0.0, 10000.0, 100.0, 1.0)
+        c2 = st.number_input("Overtime Shift Cost ($c_2$)", 0.0, 10000.0, 150.0, 1.0)
+        q_plus = st.number_input("Emergency Shift Cost ($q^+$)", 0.0, 10000.0, 200.0, 1.0)
+        q_minus = st.number_input("Shift Cancellation Cost ($q^-$)", 0.0, 100.0, 2.0, 1.0,
+            help="Cost per cancelled shift (paper: q⁻=2). Set to 0 to ignore cancellation costs.")
     
     with st.expander("⚠️ Quality Penalties (Soft Constraints)", expanded=False):
         st.caption("These penalties discourage undesirable schedule patterns without making them impossible")
