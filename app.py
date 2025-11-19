@@ -396,6 +396,11 @@ with st.sidebar:
         c1 = st.number_input("Regular Shift Cost ($c_1$)", 50.0, 500.0, 100.0, 10.0)
         c2 = st.number_input("Overtime Shift Cost ($c_2$)", 50.0, 500.0, 150.0, 10.0)
         q_plus = st.number_input("Emergency Shift Cost ($q^+$)", 100.0, 1000.0, 200.0, 10.0)
+        q_minus = st.number_input(
+            "Shift Cancellation Cost ($q^-$)", 
+            0.0, 100.0, 0.0, 1.0,
+            help="Cost of cancelling a planned shift (usually 0, but may represent wasted planning effort or contractual penalties). Paper uses q⁻=2."
+        )
     
     with st.expander("⚠️ Quality Penalties (Soft Constraints)", expanded=False):
         st.caption("These penalties discourage undesirable schedule patterns without making them impossible")
@@ -613,7 +618,7 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
     
     # Build model parameters
     model_params = {
-        'c1': c1, 'c2': c2, 'q_plus': q_plus,
+        'c1': c1, 'c2': c2, 'q_plus': q_plus, 'q_minus': q_minus,
         'c3': c3, 'c4': c4,  # Soft constraint penalties
         'n1': n1, 'n2': n2, 'n3': n3,
         'sigma': sigma, 'mu': mu,
@@ -1050,6 +1055,9 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
             3. Test after each addition
             4. Identify which constraint breaks feasibility
             """)
+            
+            # Stop execution to prevent showing welcome message
+            st.stop()
             
     except Exception as e:
         # Final catch-all for unexpected errors

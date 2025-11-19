@@ -39,6 +39,7 @@ def build_and_solve_model(
             - 'c1' (float): Regular shift cost per nurse (e.g., $100)
             - 'c2' (float): Overtime shift cost per nurse (e.g., $150)
             - 'q_plus' (float): Emergency staff cost per nurse (e.g., $200)
+            - 'q_minus' (float): Shift cancellation cost (default: 0, paper uses 2)
             - 'c3' (float): Penalty for stand-alone working days (soft constraint)
             - 'c4' (float): Penalty for unwanted shift patterns (soft constraint)
             
@@ -103,7 +104,7 @@ def build_and_solve_model(
         ...     'demand': [2, 3, 2, 2, 2, 3]
         ... })
         >>> params = {
-        ...     'c1': 100, 'c2': 150, 'q_plus': 200,
+        ...     'c1': 100, 'c2': 150, 'q_plus': 200, 'q_minus': 0,
         ...     'n1': 15, 'n2': 5, 'n3': 10,
         ...     'sigma': 0.95, 'mu': 5.0
         ... }
@@ -140,7 +141,8 @@ def build_and_solve_model(
     
     # Extract model parameters from the dictionary
     c1, c2 = model_params['c1'], model_params['c2']
-    q_plus, q_minus = model_params['q_plus'], 0.0 # q_minus is 0 for now
+    q_plus = model_params['q_plus']
+    q_minus = model_params.get('q_minus', 0.0)  # Default 0 (no cancellation cost), paper uses 2
     n1, n2, n3 = model_params['n1'], model_params['n2'], model_params['n3']
     
     # Soft constraint penalty costs
