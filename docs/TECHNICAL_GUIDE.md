@@ -57,9 +57,80 @@ numpy==2.1.3           # Numerical computations
 
 ## 🏗️ Code Architecture
 
-The system has **3 main Python files**:
+The system has **4 main Python files**:
 
-### 1. `model.py` (1,648 lines)
+### 1. `model_oop.py` (NEW - ~850 lines) ⭐
+**Purpose:** Object-oriented optimization engine - clean, maintainable interface
+
+**Key Classes:**
+```python
+class ModelParameters:
+    """Encapsulates all model parameters with validation"""
+    c1, c2, q_plus, q_minus  # Cost parameters
+    n1, n2, n3, n4           # Work rules
+    sigma, mu                # CVaR parameters
+    
+    def validate(self):
+        """Ensures all parameters are valid"""
+
+class NurseSchedulingModel:
+    """Main optimization model"""
+    def __init__(self, nurses, scenarios, params):
+        """Initialize with data and parameters"""
+    
+    def build(self, model_type="SDM"):
+        """Build the optimization model (variables + constraints)"""
+    
+    def solve(self, solver='highs'):
+        """Solve the model and return status"""
+    
+    def get_results(self):
+        """Extract solution into OptimizationResults object"""
+
+class OptimizationResults:
+    """Encapsulates solution data with convenient accessors"""
+    @property
+    def total_cost(self): ...
+    
+    @property
+    def schedule(self): ...
+```
+
+**Usage:**
+```python
+# Create parameters
+params = ModelParameters(c1=100, c2=150, q_plus=200, n1=24, n2=3, n3=16)
+
+# Create and solve model
+model = NurseSchedulingModel(nurses_list, scenarios_df, params)
+model.build(model_type="SDM")
+status = model.solve(solver='highs')
+
+# Get results
+if status == "Optimal":
+    results = model.get_results()
+    print(f"Total cost: ${results.total_cost:.2f}")
+    schedule_df = results.schedule
+```
+
+### 2. `model.py` (1,648 lines) - Legacy Functional Version
+**Purpose:** Original functional implementation (kept for backward compatibility)
+
+**Key Functions:**
+```python
+def build_and_solve_model(nurses_list, scenarios_df, model_params, 
+                          model_type="SDM", solver_name="highs"):
+    """
+    Builds and solves the model using functional approach.
+    Returns: (prob, status)
+    """
+```
+
+**Note:** `app.py` now uses the OOP version (`model_oop.py`) but falls back to functional if needed.
+
+---
+
+### 3. `app.py` (1,813 lines)
 **Purpose:** The optimization engine - builds and solves the mathematical model
 
 **Key Functions:**
@@ -86,14 +157,12 @@ solve_nurse_scheduling(
 - Lines 814-900: Solver configuration
 - Lines 901-1648: Results extraction and formatting
 
----
-
-### 2. `app.py` (1,813 lines)
+### 3. `app.py` (1,826 lines)
 **Purpose:** Web-based user interface using Streamlit
 
 **Flow:**
 ```
-User Input → Parameter Validation → Run Optimization → Display Results
+User Input → Parameter Validation → Run Optimization (OOP) → Display Results
 ```
 
 **Main Sections:**
@@ -107,12 +176,17 @@ User Input → Parameter Validation → Run Optimization → Display Results
    - Advanced constraints (shift quotas, patterns)
    - CVaR risk parameters (σ, μ)
 
-3. **Optimization Execution** (lines 671-850)
-   - Problem size estimation
-   - Solve button and progress tracking
-   - Error handling
+3. **Optimization Execution** (lines 671-900) **UPDATED TO USE OOP**
+   ```python
+   # NEW: Object-oriented approach
+   params = ModelParameters(**model_params)
+   model = NurseSchedulingModel(nurses_list, scenarios_df, params)
+   model.build(model_type="SDM")
+   status = model.solve(solver=selected_solver)
+   results = model.get_results()
+   ```
 
-4. **Results Display** (lines 851-1813)
+4. **Results Display** (lines 901-1826)
    - Summary metrics
    - Cost analysis charts
    - Coverage visualization
@@ -120,7 +194,7 @@ User Input → Parameter Validation → Run Optimization → Display Results
 
 ---
 
-### 3. `solver_config.py` (243 lines)
+### 4. `solver_config.py` (243 lines)
 **Purpose:** Configure different optimization solvers
 
 **Why this file exists:**

@@ -4,7 +4,8 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import model as m
+import model as m  # Keep for backward compatibility
+from model_oop import NurseSchedulingModel, ModelParameters, OptimizationResults
 from io import BytesIO
 import json
 from solver_config import get_available_solvers, recommend_solver, get_installation_instructions
@@ -617,16 +618,14 @@ with st.sidebar:
 # --- 4. MAIN CONTENT AREA ---
 if solve_button and nurses_list is not None and scenarios_df is not None:
     
-    # Build model parameters
+    # Build model parameters (filter out None values to use defaults)
     model_params = {
         'c1': c1, 'c2': c2, 'q_plus': q_plus, 'q_minus': q_minus,
         'c3': c3, 'c4': c4,  # Soft constraint penalties
         'n1': n1, 'n2': n2, 'n3': n3,
-        'sigma': sigma, 'mu': mu,
         
         # Advanced constraints (NEW for university project)
         'n4': n4,
-        'start_date': start_date_str,
         'shift_quotas': shift_quotas,
         'night_rest_enabled': night_rest_enabled,
         'min_consecutive_nights': min_consecutive_nights,
@@ -636,6 +635,14 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
         'max_emergency_staff': max_emergency_staff,
         'max_cancellations': max_cancellations,
     }
+    
+    # Add optional parameters only if they are not None (to use defaults from ModelParameters)
+    if sigma is not None:
+        model_params['sigma'] = sigma
+    if mu is not None:
+        model_params['mu'] = mu
+    if start_date_str is not None:
+        model_params['start_date'] = start_date_str
     
     # ============================================================================
     # VALIDATE PARAMETERS BEFORE OPTIMIZATION
@@ -781,13 +788,21 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
         start_time = time.time()
         
         try:
-            prob, status = m.build_and_solve_model(
-                nurses_list,
-                scenarios_df,
-                model_params,
-                model_type_code,
-                solver_name=selected_solver  # Pass selected solver
-            )
+            # === NEW OOP APPROACH ===
+            # Create model parameters object
+            params = ModelParameters(**model_params)
+            
+            # Create model instance
+            model = NurseSchedulingModel(nurses_list, scenarios_df, params)
+            
+            # Build the model
+            model.build(model_type=model_type_code)
+            
+            # Solve the model
+            status = model.solve(solver_name=selected_solver)
+            
+            # Get the PuLP problem object for backward compatibility
+            prob = model.prob
         except MemoryError:
             st.session_state.solve_complete = True
             progress_placeholder.empty()
@@ -878,9 +893,17 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
         if status == "Optimal":
             st.success(f"✅ **Optimization Complete!** Status: **{status}** (Solver: {selected_solver}, Time: {solve_time:.1f}s)")
             
-            # Extract results
+            # Extract results - Use OOP get_results() if model exists, otherwise fallback to functional
             extract_start = time.time()
-            results = m.extract_results(prob, nurses_list, scenarios_df, model_params, model_type_code)
+            if 'model' in locals() and hasattr(model, 'get_results'):
+                # New OOP approach
+                results_obj = model.get_results()
+                results = results_obj.to_dict()
+            elif prob is not None:
+                # Fallback to functional approach
+                results = m.extract_results(prob, nurses_list, scenarios_df, model_params, model_type_code)
+            else:
+                raise RuntimeError("No valid model or problem object available")
             extract_time = time.time() - extract_start
             st.session_state.results = results
             
