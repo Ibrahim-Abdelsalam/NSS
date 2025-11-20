@@ -104,36 +104,45 @@ The system **automatically selects** the best available solver:
 
 ```
 NSS/
-├── app.py                    # Streamlit web application (1806 lines)
-├── model.py                  # Optimization model (1646 lines)
-├── solver_config.py          # Automatic solver selection
-├── requirements.txt          # Python dependencies
-├── README.md                 # This file
-├── QUICKSTART.md             # Quick start guide
-├── HOW_TO_RUN.md            # Detailed running instructions
-├── LICENSE                   # Project license
-├── data/                     # Sample data files
-│   ├── sample_nurses.csv    # Example nurse list
-│   └── sample_scenarios.csv # Example demand scenarios
-├── docs/                     # Technical documentation
-│   ├── ADVANCED_CONSTRAINTS.md
-│   ├── CHECKLIST.md
-│   ├── CONSTRAINTS_GUIDE.md
-│   ├── IMPLEMENTATION_COMPLETE.md
-│   ├── MISSING_CONSTRAINTS_EXPLAINED.md
-│   ├── MODEL_STRUCTURE.md
-│   ├── PERFORMANCE_ANALYSIS.md
-│   ├── TUTORIAL.md
-│   └── WHERE_IS_THE_CPP.md
-└── archive/                  # Historical documentation
-    ├── GREAT_NEWS.md
-    ├── INSTALL_GUROBI.md
-    ├── LAUNCH.md
-    ├── PERFORMANCE_IMPROVEMENTS.md
-    ├── PROJECT_SUMMARY.md
-    ├── README_OLD.md
-    ├── SOLVER_OPTIONS.md
-    └── SPEED_OPTIONS.md
+├── 📄 Core Application Files
+│   ├── app.py                    # Streamlit web application
+│   ├── model.py                  # Original optimization model
+│   ├── model_oop.py              # OOP refactored model (recommended)
+│   ├── solver_config.py          # Automatic solver selection
+│   ├── requirements.txt          # Python dependencies
+│   ├── README.md                 # This file
+│   └── LICENSE                   # Project license
+│
+├── 📓 notebooks/                 # Jupyter notebooks for analysis
+│   ├── data_exploration.ipynb        # Exploratory data analysis
+│   ├── oop_model_tutorial.ipynb      # OOP model usage guide
+│   ├── parameter_experiments.ipynb   # Parameter sensitivity analysis
+│   └── validation_analysis.ipynb     # Paper validation & results
+│
+├── 📜 scripts/                   # Utility scripts
+│   └── extract_ortec_data.py     # ORTEC benchmark data extraction
+│
+├── 🧪 tests/                     # Test suite
+│   └── test_oop.py               # OOP model unit tests
+│
+├── 📊 data/                      # Datasets
+│   ├── sample_nurses.csv             # Sample nurse roster
+│   ├── sample_scenarios.csv          # Sample demand scenarios
+│   ├── paper_validation_nurses.csv   # Validation nurses (20 nurses)
+│   ├── paper_validation_scenarios.csv # Validation scenarios (50 scenarios, 28 days)
+│   ├── ortec_nurses.csv              # ORTEC benchmark nurses (16 nurses)
+│   └── ortec_scenarios.csv           # ORTEC benchmark scenarios (50 scenarios, 31 days)
+│
+├── 📚 docs/                      # Documentation
+│   ├── OOP_REFACTORING_SUMMARY.md    # OOP architecture overview
+│   ├── TECHNICAL_GUIDE.md            # Technical implementation details
+│   ├── ADVANCED_CONSTRAINTS.md       # Advanced constraint documentation
+│   ├── CONSTRAINTS_GUIDE.md          # Constraint catalog
+│   ├── mathematical_model.tex        # LaTeX mathematical formulation
+│   └── [research paper PDF]          # He et al. (2019) paper
+│
+└── 📦 archive/                   # Historical files
+    └── [legacy documentation]
 ```
 
 ## 🎯 Model Parameters
