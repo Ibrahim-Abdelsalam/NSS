@@ -114,7 +114,9 @@ def build_and_solve_model(
     
     Notes:
         - Solve time depends on problem size (nurses × days × scenarios)
-        - Typical solve times: 10-60 seconds for medium problems (10 nurses, 14 days, 10 scenarios)
+        - Small: ~2,400 variables, ~2,200 constraints → 5-20 seconds
+        - Medium: ~9,600 variables, ~8,800 constraints → 20-60 seconds
+        - Large: ~91,000 variables, ~83,000 constraints → 60-600 seconds
         - For large problems, solver may return near-optimal solution within time/gap limits
         - See estimate_solve_time() for problem size estimation
     
