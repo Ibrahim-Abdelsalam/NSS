@@ -1,18 +1,18 @@
-# 🩺 Nurse Scheduling System - Optimization Prototype
+# Nurse Scheduling System - Optimization Prototype
 
 A web-based nurse scheduling prototype using Mixed Integer Linear Programming (MILP) to generate optimized schedules that balance cost minimization, staffing coverage, regulatory compliance, and fairness. Built with Python, PuLP, and Streamlit.
 
-## ✨ Key Features
+## Key Features
 
-- **🎯 MILP Optimization** - Automated schedule generation using mathematical optimization
-- **✅ Constraint Satisfaction** - Enforces work regulations, coverage requirements, and fairness criteria
-- **🖥️ Web Interface** - Accessible Streamlit-based UI requiring no programming knowledge
-- **📈 Visualization** - Interactive Gantt charts and schedule heatmaps
-- **📄 Export Options** - Generate schedules in CSV and Excel formats
-- **⚡ Dual Solver Support** - Uses Gurobi (commercial) or HiGHS (free) solver backends
-- **🔧 Configurable Constraints** - Adjustable maximum shifts, rest periods, and scheduling rules
+- **MILP Optimization** - Automated schedule generation using mathematical optimization
+- **Constraint Satisfaction** - Enforces work regulations, coverage requirements, and fairness criteria
+- **Web Interface** - Accessible Streamlit-based UI requiring no programming knowledge
+- **Visualization** - Interactive Gantt charts and schedule heatmaps
+- **Export Options** - Generate schedules in CSV and Excel formats
+- **Dual Solver Support** - Uses Gurobi (commercial) or HiGHS (free) solver backends
+- **Configurable Constraints** - Adjustable maximum shifts, rest periods, and scheduling rules
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Install Dependencies
 ```bash
@@ -33,7 +33,7 @@ The app will automatically open in your browser at **http://localhost:8501**
 4. Click optimize to generate schedule
 5. View results as interactive charts or export to CSV/Excel
 
-## 🛠️ Solver Configuration
+## Solver Configuration
 
 The system supports multiple optimization solvers:
 
@@ -49,47 +49,47 @@ pip install highspy
 
 For Gurobi (faster performance), obtain academic license at: https://www.gurobi.com/academia/
 
-## 📋 Implemented Features
+## Implemented Features
 
-### ✅ Core Optimization Model
-1. ✅ **MILP Formulation** - Mixed Integer Linear Programming for nurse-to-shift assignment
-2. ✅ **Cost Minimization** - Minimize total staffing costs while meeting coverage
-3. ✅ **Multiple Shift Types** - Support for Early, Day, Late, and Night shifts
-4. ✅ **Configurable Planning Horizon** - Adjustable schedule duration (14-28 days typical)
-5. ✅ **Synthetic Data Generation** - Random test case generation for validation
+### Core Optimization Model
+1. **MILP Formulation** - Mixed Integer Linear Programming for nurse-to-shift assignment
+2. **Cost Minimization** - Minimize total staffing costs while meeting coverage
+3. **Multiple Shift Types** - Support for Early, Day, Late, and Night shifts
+4. **Configurable Planning Horizon** - Adjustable schedule duration (14-28 days typical)
+5. **Synthetic Data Generation** - Random test case generation for validation
 
-### 🔒 Constraints Implemented
-1. ✅ **Coverage Requirements** - Minimum staffing per shift type per day
-2. ✅ **Single Assignment** - One shift maximum per nurse per day
-3. ✅ **Maximum Consecutive Shifts** - Limit continuous work periods (5-7 days)
-4. ✅ **Rest Period Rules** - Mandatory time off between shift blocks
-5. ✅ **Shift Type Restrictions** - Control night shift exposure and patterns
-6. ✅ **Fairness Criteria** - Balanced workload distribution across nurses
+### Constraints Implemented
+1. **Coverage Requirements** - Minimum staffing per shift type per day
+2. **Single Assignment** - One shift maximum per nurse per day
+3. **Maximum Consecutive Shifts** - Limit continuous work periods (5-7 days)
+4. **Rest Period Rules** - Mandatory time off between shift blocks
+5. **Shift Type Restrictions** - Control night shift exposure and patterns
+6. **Fairness Criteria** - Balanced workload distribution across nurses
 
-### 🎨 User Interface Features
-- ✅ **Streamlit Web Interface** - Accessible browser-based application
-- ✅ **CSV Data Upload** - Import nurse availability and shift requirements
-- ✅ **Interactive Configuration** - Adjust constraints without coding
-- ✅ **Real-Time Validation** - Input checking before optimization
-- ✅ **Visual Feedback** - Progress indicators during solving
+### User Interface Features
+- **Streamlit Web Interface** - Accessible browser-based application
+- **CSV Data Upload** - Import nurse availability and shift requirements
+- **Interactive Configuration** - Adjust constraints without coding
+- **Real-Time Validation** - Input checking before optimization
+- **Visual Feedback** - Progress indicators during solving
 
-### 📊 Visualization & Results
-- ✅ **Schedule Heatmap** - Color-coded visual schedule representation
-- ✅ **Gantt Charts** - Timeline view of nurse assignments
-- ✅ **Coverage Analysis** - Staffing level visualization by shift
-- ✅ **Cost Breakdown** - Summary of optimization costs
-- ✅ **Constraint Verification** - Post-solve validation reporting
+### Visualization & Results
+- **Schedule Heatmap** - Color-coded visual schedule representation
+- **Gantt Charts** - Timeline view of nurse assignments
+- **Coverage Analysis** - Staffing level visualization by shift
+- **Cost Breakdown** - Summary of optimization costs
+- **Constraint Verification** - Post-solve validation reporting
 
-### 💾 Export Capabilities
-- ✅ **CSV Export** - Nurse roster and schedule data
-- ✅ **Excel Export** - Formatted spreadsheet output
-- ✅ **PNG Heatmaps** - Static schedule images (requires Kaleido)
+### Export Capabilities
+- **CSV Export** - Nurse roster and schedule data
+- **Excel Export** - Formatted spreadsheet output
+- **PNG Heatmaps** - Static schedule images (requires Kaleido)
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 NSS/
-├── 📄 Core Application Files
+├── Core Application Files
 │   ├── app.py                    # Streamlit web application
 │   ├── model.py                  # MILP optimization model
 │   ├── model_oop.py              # Object-oriented model implementation
@@ -99,20 +99,20 @@ NSS/
 │   ├── README.md                 # This file
 │   └── LICENSE                   # Project license
 │
-├── 📓 notebooks/                 # Jupyter notebooks for analysis
+├── notebooks/                    # Jupyter notebooks for analysis
 │   └── [analysis notebooks]
 │
-├── 📜 scripts/                   # Utility scripts
+├── scripts/                      # Utility scripts
 │   └── [helper scripts]
 │
-├── 🧪 tests/                     # Test suite
+├── tests/                        # Test suite
 │   └── test_oop.py               # Unit tests
 │
-├── 📊 data/                      # Sample datasets
+├── data/                         # Sample datasets
 │   ├── sample_nurses.csv         # Sample nurse roster
 │   └── sample_scenarios.csv      # Sample shift requirements
 │
-├── 📚 docs/                      # Documentation
+├── docs/                         # Documentation
 │   ├── ADVANCED_CONSTRAINTS.md       # Advanced constraint details
 │   ├── CONSTRAINTS_GUIDE.md          # Constraint catalog
 │   ├── OOP_REFACTORING_SUMMARY.md    # Code architecture overview
@@ -120,36 +120,36 @@ NSS/
 │   ├── mathematical_model.tex        # LaTeX math formulation
 │   └── [research paper PDF]          # Reference paper
 │
-└── 📦 archive/                   # Legacy documentation
+└── archive/                      # Legacy documentation
     └── [historical files]
 ```
 
-## 🎯 Model Parameters
+## Model Parameters
 
-### 💰 Cost Parameters
+### Cost Parameters
 - **Regular Shift Cost** - Base cost per scheduled shift
 - **Overtime Cost** - Premium cost for additional shifts
 - **Penalty Costs** - Soft constraint violation penalties
 
-### 📋 Constraint Configuration
+### Constraint Configuration
 - **Max Consecutive Shifts** - Maximum continuous work days (default: 5-7)
 - **Rest Period Requirements** - Minimum days off between shift blocks
 - **Shift Type Limits** - Maximum night shifts, shift quotas
 - **Coverage Requirements** - Minimum staff per shift type per day
 
-### 📊 Problem Scale
+### Problem Scale
 - **Nurses** - Number of staff members (10-50 typical)
 - **Planning Horizon** - Schedule duration in days (14-28 typical)
 - **Shift Types** - Early, Day, Late, Night (4 types standard)
 
-## 📊 Performance Benchmarks
+## Performance Benchmarks
 
 ### Solve Times (Initial Tests)
 
 **Small Problem (10 nurses, 14 days)**
 - Variables: ~560
 - Constraints: ~500
-- Gurobi: 1-5 seconds ⚡
+- Gurobi: 1-5 seconds
 - HiGHS: 5-20 seconds
 
 **Medium Problem (20 nurses, 28 days)**
@@ -166,7 +166,7 @@ NSS/
 
 **Note:** These are preliminary results based on synthetic test data. Performance will vary based on constraint complexity and hardware specifications.
 
-## 🎓 Academic Foundation
+## Academic Foundation
 
 This prototype implements nurse scheduling optimization using established operations research methodologies. The implementation draws from academic literature on the Nurse Scheduling Problem (NSP), an NP-hard combinatorial optimization challenge.
 
@@ -184,7 +184,7 @@ Referenced literature includes works on:
 
 **Note:** This is a proof-of-concept prototype requiring validation with real hospital data before clinical deployment.
 
-## 🛠️ Technical Stack
+## Technical Stack
 
 ### Core Technologies
 - **Python 3.13.5** - Programming language
@@ -203,7 +203,7 @@ Referenced literature includes works on:
 - **OpenPyXL 3.0+** - Excel file export
 - **ReportLab 4.0+** - PDF generation (optional)
 
-## 📚 Documentation
+## Documentation
 
 ### Project Documentation
 - **[methodology.tex](methodology.tex)** - LaTeX methodology document describing the prototype
@@ -214,11 +214,11 @@ Referenced literature includes works on:
 - **[docs/TECHNICAL_GUIDE.md](docs/TECHNICAL_GUIDE.md)** - Technical implementation guide
 - **[docs/OOP_REFACTORING_SUMMARY.md](docs/OOP_REFACTORING_SUMMARY.md)** - Code architecture overview
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### Common Issues and Solutions
 
-#### ❌ "Solver not found"
+#### "Solver not found"
 **Solution:** Install a solver
 ```bash
 # For free HiGHS solver
@@ -228,13 +228,13 @@ pip install highspy
 # Visit: https://www.gurobi.com/academia/
 ```
 
-#### ❌ Kaleido error when exporting images
+#### Kaleido error when exporting images
 **Solution:** Install kaleido (optional for PNG export)
 ```bash
 pip install kaleido
 ```
 
-#### ❌ "Infeasible" result - No solution found
+#### "Infeasible" result - No solution found
 **Possible Causes:**
 1. **Demand exceeds capacity** - Not enough nurses or max shifts too low
 2. **Conflicting constraints** - Mutually exclusive requirements
@@ -246,7 +246,7 @@ pip install kaleido
 - Reduce constraint strictness
 - Check shift requirements are realistic
 
-#### 🐢 Slow solving
+#### Slow solving
 **Solutions:**
 1. **Use Gurobi if available** (significantly faster than HiGHS)
 2. **Reduce problem size:**
@@ -255,22 +255,22 @@ pip install kaleido
    - Simpler constraints
 3. **Upgrade hardware** - More RAM and faster CPU help
 
-#### ❌ CSV upload errors
+#### CSV upload errors
 **Solutions:**
 - Verify CSV format matches required structure
 - Check for special characters or encoding issues
 - Ensure column names match expected format
 - Use sample CSV files as templates
 
-## 🔒 Data Privacy & Security
+## Data Privacy & Security
 
-- ✅ All computation runs **locally** on your machine
-- ✅ No data sent to external servers
-- ✅ No internet connection required after installation
-- ✅ CSV uploads processed in memory only
-- ✅ Sample data generator creates synthetic test data
+- All computation runs **locally** on your machine
+- No data sent to external servers
+- No internet connection required after installation
+- CSV uploads processed in memory only
+- Sample data generator creates synthetic test data
 
-## 💡 Usage Tips
+## Usage Tips
 
 ### Getting Started
 1. **Start with sample data** - Use provided sample CSV files to understand the system
@@ -303,15 +303,15 @@ day,shift,demand
 - **Monitor solve time** - Large problems may require several minutes
 - **Verify results** - Review generated schedules for practical feasibility
 
-## 📝 License
+## License
 
 This project is available for educational and academic use.
 
-## 🤝 Contributing
+## Contributing
 
 This is an academic prototype developed for university coursework. The codebase is provided as-is for educational purposes.
 
-## 📧 Contact & Support
+## Contact & Support
 
 ### Development Team
 - MennaTallah Amin (120220027)
@@ -325,29 +325,29 @@ This is an academic prototype developed for university coursework. The codebase 
 - **HiGHS Documentation:** https://highs.dev/
 - **Streamlit Docs:** https://docs.streamlit.io/
 
-## 🎯 Project Status
+## Project Status
 
 **Status: Proof-of-Concept Prototype**
 
-### ⚠️ Important Limitations
+### Important Limitations
 This is a **prototype system** requiring significant additional work before clinical deployment:
 
-- ❗ **No real hospital data validation** - Tested only with synthetic data
-- ❗ **Requires field testing** - Needs validation with actual healthcare professionals
-- ❗ **Limited constraint coverage** - May not capture all real-world hospital policies
-- ❗ **No regulatory compliance verification** - Requires validation against local labor laws
-- ❗ **Scalability untested** - Performance with 100+ nurses not validated
-- ❗ **Deterministic only** - Does not handle demand uncertainty or stochastic scenarios
+- **No real hospital data validation** - Tested only with synthetic data
+- **Requires field testing** - Needs validation with actual healthcare professionals
+- **Limited constraint coverage** - May not capture all real-world hospital policies
+- **No regulatory compliance verification** - Requires validation against local labor laws
+- **Scalability untested** - Performance with 100+ nurses not validated
+- **Deterministic only** - Does not handle demand uncertainty or stochastic scenarios
 
-### ✅ Completed Features
-- ✅ Core MILP optimization engine
-- ✅ Web-based user interface
-- ✅ Basic constraint implementation
-- ✅ Visualization and export capabilities
-- ✅ Dual solver support (Gurobi/HiGHS)
-- ✅ Modular codebase architecture
+### Completed Features
+- Core MILP optimization engine
+- Web-based user interface
+- Basic constraint implementation
+- Visualization and export capabilities
+- Dual solver support (Gurobi/HiGHS)
+- Modular codebase architecture
 
-### 🔄 Future Work Required
+### Future Work Required
 - Integration with hospital information systems
 - Validation with real clinical data
 - User acceptance testing with healthcare staff
