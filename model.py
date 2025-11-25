@@ -114,7 +114,9 @@ def build_and_solve_model(
     
     Notes:
         - Solve time depends on problem size (nurses × days × scenarios)
-        - Typical solve times: 10-60 seconds for medium problems (10 nurses, 14 days, 10 scenarios)
+        - Small: ~2,400 variables, ~2,200 constraints → 5-20 seconds
+        - Medium: ~9,600 variables, ~8,800 constraints → 20-60 seconds
+        - Large: ~91,000 variables, ~83,000 constraints → 60-600 seconds
         - For large problems, solver may return near-optimal solution within time/gap limits
         - See estimate_solve_time() for problem size estimation
     
@@ -146,8 +148,8 @@ def build_and_solve_model(
     n1, n2, n3 = model_params['n1'], model_params['n2'], model_params['n3']
     
     # Soft constraint penalty costs
-    c3 = model_params.get('c3', 5.0)  # Penalty for stand-alone shifts (paper value)
-    c4 = model_params.get('c4', 5.0)  # Penalty for unwanted shift patterns (paper value)
+    c3 = model_params.get('c3', 10.0)  # Penalty for stand-alone shifts
+    c4 = model_params.get('c4', 15.0)  # Penalty for unwanted shift patterns
     
     # CVaR parameters (if used)
     sigma = model_params.get('sigma', 0.95) # Default 0.95

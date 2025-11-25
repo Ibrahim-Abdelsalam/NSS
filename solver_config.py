@@ -2,23 +2,46 @@
 Solver Configuration Module
 
 This module provides intelligent automatic solver selection for the nurse scheduling model.
-Supports only free, open-source solvers: HiGHS (fast - recommended), CBC (slower fallback).
+Supports Gurobi (commercial - fastest), HiGHS (open-source - fast), and CBC (fallback).
 
 The framework automatically detects and selects the best available solver without user intervention.
+Priority: Gurobi > HiGHS > CBC
 """
 
 import pulp
 
 def get_available_solvers():
     """
-    Detect which free, open-source solvers are available on this system.
+    Detect which solvers are available on this system.
     
     Returns:
         dict: Available solvers with their display names and status
     """
     available = {}
     
-    # Test HiGHS - modern open-source solver (faster than CBC)
+    # Test Gurobi - commercial solver (fastest)
+    try:
+        solver = pulp.GUROBI(msg=False)
+        if solver.available():
+            available['GUROBI'] = {
+                'name': 'Gurobi (Commercial)',
+                'speed': 'Fastest (10-20× faster than CBC)',
+                'cost': 'Commercial (free academic license)',
+                'available': True,
+                'priority': 1  # Highest priority
+            }
+        else:
+            raise Exception("Gurobi not available")
+    except (ImportError, Exception):
+        available['GUROBI'] = {
+            'name': 'Gurobi (Not Installed)',
+            'speed': 'Fastest',
+            'cost': 'Commercial - get free academic license',
+            'available': False,
+            'priority': 1
+        }
+    
+    # Test HiGHS - modern open-source solver
     try:
         solver = pulp.HiGHS(msg=False)
         if solver.available():
@@ -27,7 +50,7 @@ def get_available_solvers():
                 'speed': 'Fast (3-5× faster than CBC)',
                 'cost': 'Free',
                 'available': True,
-                'priority': 1  # Highest priority
+                'priority': 2
             }
         else:
             raise Exception("HiGHS not available")
@@ -37,7 +60,7 @@ def get_available_solvers():
             'speed': 'Fast (3-5× faster than CBC)',
             'cost': 'Free - pip install highspy',
             'available': False,
-            'priority': 1
+            'priority': 2
         }
     
     # Test CBC (always available with PuLP)
@@ -49,7 +72,7 @@ def get_available_solvers():
                 'speed': 'Standard',
                 'cost': 'Free',
                 'available': True,
-                'priority': 2  # Lower priority
+                'priority': 3  # Lowest priority
             }
     except:
         # CBC is always available with PuLP
@@ -58,7 +81,7 @@ def get_available_solvers():
             'speed': 'Standard',
             'cost': 'Free',
             'available': True,
-            'priority': 2
+            'priority': 3
         }
     
     return available
@@ -66,11 +89,12 @@ def get_available_solvers():
 
 def auto_select_solver():
     """
-    Automatically select the best available free solver.
+    Automatically select the best available solver.
     
     Priority order:
-    1. HiGHS (fastest free solver)
-    2. CBC (reliable fallback)
+    1. Gurobi (fastest commercial solver)
+    2. HiGHS (fast free solver)
+    3. CBC (reliable fallback)
     
     Returns:
         str: Name of the best available solver
@@ -96,7 +120,7 @@ def create_solver(solver_name, time_limit, mip_gap, verbose=False):
     Create and configure a solver instance.
     
     Args:
-        solver_name (str): Name of solver ('HiGHS' [default], 'CBC', or 'AUTO' for auto-selection)
+        solver_name (str): Name of solver ('GUROBI', 'HiGHS', 'CBC', or 'AUTO' for auto-selection)
         time_limit (int): Maximum solving time in seconds
         mip_gap (float): MIP gap tolerance (0.0 = optimal, 0.05 = 5% gap)
         verbose (bool): Whether to show solver output
@@ -109,8 +133,21 @@ def create_solver(solver_name, time_limit, mip_gap, verbose=False):
     if solver_name == 'AUTO' or solver_name is None:
         solver_name = auto_select_solver()
     
-    if solver_name == 'HiGHS':
-        # HiGHS - modern open-source solver (recommended)
+    if solver_name == 'GUROBI':
+        # Gurobi - commercial solver (fastest)
+        return pulp.GUROBI(
+            msg=verbose,
+            timeLimit=time_limit,
+            gapRel=mip_gap,
+            Threads=8,
+            Presolve=2,      # Aggressive presolve
+            MIPFocus=1,      # Focus on finding good solutions
+            Cuts=2,          # Aggressive cuts
+            Heuristics=0.1   # 10% time on heuristics
+        )
+    
+    elif solver_name == 'HiGHS':
+        # HiGHS - modern open-source solver
         return pulp.HiGHS(
             msg=verbose,
             timeLimit=time_limit,

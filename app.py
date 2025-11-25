@@ -572,26 +572,57 @@ with st.sidebar:
     
     st.divider()
     
-    # --- Auto Solver Info (Hidden selection) ---
-    # Automatically select the best available solver without showing UI
-    from solver_config import auto_select_solver
-    selected_solver = auto_select_solver()
+    # --- Solver Selection ---
+    st.header("⚙️ Solver Configuration")
     
-    # Show a simple info message about which solver is being used
+    from solver_config import auto_select_solver, get_available_solvers
+    
+    # Get available solvers
     available_solvers = get_available_solvers()
-    solver_info = available_solvers.get(selected_solver, {})
     
-    with st.expander("ℹ️ Solver Information", expanded=False):
-        st.success(f"**Auto-selected solver**: {selected_solver}")
-        st.info(f"**Speed**: {solver_info.get('speed', 'Unknown')}")
-        st.caption("The system automatically selects the fastest available free solver. HiGHS is preferred over CBC.")
+    # Create list of working solvers
+    working_solvers = ['AUTO (Recommended)']
+    solver_details = {}
+    
+    for name, info in available_solvers.items():
+        if info['available']:
+            working_solvers.append(name)
+            solver_details[name] = info
+    
+    # Solver selection dropdown
+    solver_choice = st.selectbox(
+        "Select Solver:",
+        working_solvers,
+        help="AUTO automatically selects the fastest available solver. Manual selection available if you encounter issues."
+    )
+    
+    # Determine which solver to use
+    if solver_choice == 'AUTO (Recommended)':
+        selected_solver = auto_select_solver()
+        st.info(f"🎯 **Auto-selected**: {selected_solver} ({solver_details.get(selected_solver, {}).get('speed', 'Standard')})")
+    else:
+        selected_solver = solver_choice
+        st.success(f"✅ **Using**: {selected_solver}")
+    
+    # Show solver details in expander
+    with st.expander("📋 Solver Details", expanded=False):
+        solver_info = solver_details.get(selected_solver, {})
         
-        # Show installation tip if HiGHS is not available
-        if selected_solver == 'CBC':
-            st.warning("� **Tip**: Install HiGHS for 3-5× faster solving!")
+        if solver_info:
+            st.write(f"**Name**: {solver_info.get('name', 'Unknown')}")
+            st.write(f"**Speed**: {solver_info.get('speed', 'Unknown')}")
+            st.write(f"**Cost**: {solver_info.get('cost', 'Unknown')}")
+        
+        # Show installation tip if not using fastest solver
+        if selected_solver == 'CBC' and available_solvers.get('HiGHS', {}).get('available') == False:
+            st.warning("💡 **Tip**: Install HiGHS for 3-5× faster solving!")
             st.code("pip install highspy", language="bash")
-            st.warning(f"⚠️ {selected_solver} is not installed. Falling back to CBC.")
-            selected_solver = 'CBC'  # Fallback
+        
+        # Show all available solvers
+        st.write("**All Solvers Status:**")
+        for name, info in available_solvers.items():
+            status = "✅" if info['available'] else "❌"
+            st.write(f"{status} {name}: {info['speed']}")
     
     st.divider()
     
@@ -740,7 +771,7 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
     if problem_size > 5000:
         st.info(f"⚠️ Large problem detected ({len(nurses_list)} nurses × {len(scenarios_df['day'].unique())} days × {len(scenarios_df['scenario'].unique())} scenarios). Solver may find a near-optimal solution (within 5%) for faster results.")
     
-    # Enhanced progress indicator (using placeholder for better control)
+    # Enhanced progress indicator
     progress_placeholder = st.empty()
     with progress_placeholder.container():
         st.markdown("""
@@ -753,29 +784,6 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
             </p>
         </div>
         """, unsafe_allow_html=True)
-        
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        
-        # Simulate progress updates (since we can't get real-time from solver)
-        import time
-        import threading
-        
-        def update_progress():
-            steps = [
-                (0.25, "📊 Loading data..."),
-                (0.5, "🏗️ Building model..."),
-                (0.75, "🔍 Solving..."),
-            ]
-            for prog, msg in steps:
-                if not hasattr(st.session_state, 'solve_complete'):
-                    progress_bar.progress(prog)
-                    status_text.info(msg)
-                    time.sleep(0.3)
-        
-        # Start progress animation in background
-        progress_thread = threading.Thread(target=update_progress, daemon=True)
-        progress_thread.start()
     
     # ============================================================================
     # SOLVE MODEL WITH COMPREHENSIVE ERROR HANDLING
@@ -798,13 +806,22 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
             # Build the model
             model.build(model_type=model_type_code)
             
-            # Solve the model
-            status = model.solve(solver_name=selected_solver)
+            # Solve the model with fallback mechanism
+            try:
+                status = model.solve(solver_name=selected_solver)
+            except Exception as solver_error:
+                # If Gurobi or other solver fails, fall back to CBC
+                if selected_solver != 'CBC':
+                    st.warning(f"⚠️ {selected_solver} encountered an error. Falling back to CBC...")
+                    st.warning(f"Error: {str(solver_error)}")
+                    selected_solver = 'CBC'
+                    status = model.solve(solver_name='CBC')
+                else:
+                    raise solver_error
             
             # Get the PuLP problem object for backward compatibility
             prob = model.prob
         except MemoryError:
-            st.session_state.solve_complete = True
             progress_placeholder.empty()
             
             st.error("❌ **Out of Memory Error**")
@@ -820,7 +837,6 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
             st.stop()
             
         except ImportError as e:
-            st.session_state.solve_complete = True
             progress_placeholder.empty()
             
             st.error(f"❌ **Import Error:** {e}")
@@ -837,7 +853,6 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
             # Log the full error for debugging
             error_details = traceback.format_exc()
             
-            st.session_state.solve_complete = True
             progress_placeholder.empty()
             
             st.error(f"❌ **Solver Error:** {type(solver_error).__name__}")
@@ -885,7 +900,6 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
             st.stop()
         
         solve_time = time.time() - start_time
-        st.session_state.solve_complete = True
         
         # Clear progress indicator
         progress_placeholder.empty()
@@ -1087,9 +1101,7 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
         # Final catch-all for unexpected errors
         import traceback
         
-        st.session_state.solve_complete = True
-        if 'progress_container' in locals():
-            progress_placeholder.empty()
+        progress_placeholder.empty()
         
         st.error("❌ **Unexpected Error**")
         st.error(f"### {type(e).__name__}: {str(e)}")
