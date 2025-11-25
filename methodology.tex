@@ -1,0 +1,187 @@
+\documentclass[1pt,a4paper]{article}
+
+% ===== PACKAGES =====
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{amsmath, amsfonts, amssymb}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{setspace}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{xurl}
+\usepackage{array}
+\usepackage{url}
+\usepackage{xcolor}
+
+% URL breaking configuration
+\usepackage[hyphens]{url}
+\usepackage{multicol}
+\usepackage[hidelinks]{hyperref}
+\usepackage{caption}
+\usepackage{float}
+
+% Gantt chart packages
+\usepackage{pgfgantt}
+\usepackage{tikz}
+
+\renewcommand{\cftdot}{}
+\renewcommand{\arraystretch}{1.2}
+
+% ===== PAGE SETUP =====
+\geometry{left=0.5in, right=0.5in, top=0.5in, bottom=0.7in}
+\onehalfspacing
+
+% ===== TITLE FORMATTING =====
+\titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalsize\bfseries\itshape}{\thesubsection}{1em}{}
+
+
+% ===== DOCUMENT INFO =====
+\title{\textbf{Predictive-Stochastic Integration for Nurse Scheduling: A CVaR-Based Framework Under Demand Uncertainty}\\ 
+\textit{Literature Review \& Gap Analysis}}
+\date{}
+
+\begin{document}
+
+\pagenumbering{roman}
+
+% ===== LOGO =====
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.65\textwidth]{small.png}
+\end{figure}
+
+\maketitle
+
+\begin{center}
+\textbf{Prepared by:}\\[6pt]
+MennaTallah Amin \hspace{0.3cm} \textbf{120220027}\\
+Khadiga Mohamed \hspace{0.3cm} \textbf{120220039}\\
+Ibrahim Magdy \hspace{0.3cm} \textbf{120220077}\\
+Rahmatullah Mohamed \hspace{0.3cm} \textbf{120220079}
+\end{center}
+
+\tableofcontents
+
+\newpage
+\pagenumbering{arabic}
+
+\section{Methodology}
+
+\subsection{Research Problem and Scope}
+
+The Nurse Scheduling Problem (NSP) is an NP-hard combinatorial optimization problem that requires simultaneous satisfaction of institutional, regulatory and human centered objectives [3]. This research develops a web-based prototype to answer: \textit{How can healthcare administrators generate nurse schedules that are cost effective and have adequate staffing coverage, regulatory compliance and fairness?}
+
+Manual scheduling is time consuming, error prone and struggles to balance competing constraints such as coverage requirements, work regulations and nurse preferences. Commercial solutions are often expensive and inflexible. This project develops an open-source scheduling tool that uses optimization algorithms to automate schedule generation while having human oversight and customization. As a proof-of-concept implementation, the system needs to be refined, validated with real hospital data and tested extensively before deployment in clinical settings.
+
+The prototype allows users to input nurse availability, define shift requirements, configure constraints (max consecutive shifts, rest periods, weekend patterns) and generate schedules. The system handles multiple shift types (Early, Day, Late, Night) and adjustable planning horizons.
+
+\subsection{System Architecture and Design}
+
+The prototype follows a 3-tier architecture, which is depicted as: the user interface built with Streamlit (web-based) to provide easy navigation, the optimization engine built with PuLP solves scheduling problems that are formulated, and backends based on Gurobi together with HiGHS calculate optimal or near-optimal outcomes.
+
+Design choices favored prototyping and usability testing while deferring theoretical complexity issues. The current prototype replaces stochastic model usage for heavy historical data requirements by following deterministic constraint satisfaction methods that allow configurable parameters. The interface provides interactive controls that let users set problem size, cost weights, and constraint strictness parameters without needing programming expertise. As a proof of concept, this system requires enhancement with uncertainty modeling to achieve production deployment status.
+
+This interface supports data upload through CSV files for nurse availability schedules and shift requirements, alongside real-time constraint validation and visualization tools including Gantt charts and schedule heatmaps. Nurse schedules are exported in standard formats that support distribution to nursing staff. Initial implementations require validation through user acceptance testing together with iteration cycles.
+
+\subsection{Prototype Structure}
+
+The prototype codebase is organized into modular components to facilitate maintenance and future enhancements. The main application file (\texttt{app.py}) implements the Streamlit web interface, handling user interactions, session state management, and visualization rendering. The optimization logic resides in \texttt{model.py}, which defines the MILP formulation using PuLP abstractions—this module encapsulates decision variables, objective function construction, and constraint definitions as Python functions that can be configured with different parameter sets.
+
+Solver configuration is managed through \texttt{solver\_config.py}, which provides a unified interface for switching between Gurobi and HiGHS backends, adjusting solver parameters (time limits, optimality gaps, thread counts), and handling solver-specific options. Data handling utilities process CSV inputs, validate nurse availability and shift requirements, generate synthetic test scenarios, and export results in multiple formats.
+
+The prototype includes sample data files (\texttt{data/sample\_nurses.csv} and \texttt{data/sample\_scenarios.csv}) demonstrating expected input formats. Documentation files provide setup instructions (\texttt{HOW\_TO\_RUN.md}), and technical details about constraint implementation and performance characteristics. This modular structure allows researchers to modify individual components—such as replacing the MILP formulation with alternative optimization approaches—without restructuring the entire application, though such modifications require careful testing to ensure compatibility.
+
+\subsection{Implementation Approach}
+
+Development used continuous prototype iteration throughout the entire development process for project development. Our essential programming versions contained basic staff shift limits for every day, combined with mandatory complete coverage needs and maximized maximum permitted work length. Our base scheduling versions enabled one-day staff shifts with coverage checking functionality combined with restrictions on  consecutive shifts. The mathematical model we adopted helped us improve the user interface and added cost reduction and soft constraints features to later application versions.
+
+Our entire development team codes programs in Python 3.13.5 because this version provides stable library support and quick prototype development. The 3.3.0 version of PuLP introduces basic mathematical programming features, enabling developers to create constraints by writing simple Python programs. As the main solver for medium-to-large-sized problem solutions, Gurobi 13.0.0 combines with HiGHS 1.12.0, which is an accessible solver with no licensing costs.
+
+The prototype checks CSV information using Pandas 2.2.3 library as part of the procedure. Our work involves making both dynamic interactive Plotly 5.24.1 data visualizations alongside static output graphics from Matplotlib 3.10.0. Streamlit 1.45.1 controls user sessions and interaction on the web and displays its interface. Modern technologies speed up development processes, but real-world production environments require superior error control and evaluation of large-scale application performance.
+
+\subsection{Data Collection and Testing}
+
+Real hospital data has been requested from hospitals to validate against actual clinical workflows but has not been received due to privacy protocols and institutional approval processes. In the meantime the prototype uses randomly generated synthetic data and benchmark instances from literature [3,5,13]. While the system works with this synthetic data, full validation will be pending when real world data is received. Test scenarios vary in size: small (10 nurses, 14 days), medium (20 nurses, 28 days), large (50 nurses, 28 days).
+
+The data generation module of the prototype creates random test cases with realistic patterns: day of week variation in demand, nurse availability constraints, shift preferences. These synthetic scenarios allow to verify basic constraint satisfaction, solution feasibility and computational performance for different problem sizes. But randomly generated data cannot replicate the complexity, regulatory nuances and operational unpredictability of real hospital environments. Full validation will be when real clinical scheduling data is available and end-user testing with healthcare professionals.
+
+\subsection{Core Functionality}
+
+The prototype scheduling model treats nurse assignment as a Mixed Integer Linear Program (MILP). Decision variables are nurse to shift assignments. The objective is to minimize total staffing costs while meeting coverage requirements. Constraints enforce regulatory rules (max consecutive shifts, mandatory rest periods), operational requirements (one shift per nurse per day, min coverage levels) and optional fairness criteria (balanced workload distribution). This basic model needs to be enhanced with additional real world constraints identified through stakeholder input.
+
+Users configure the prototype through the web interface by uploading nurse data, defining shift requirements and setting constraint parameters. The system validates the inputs, formulates the problem, solves it and displays the results. User testing is needed to refine these workflows.
+
+\begin{table}[h]
+\centering
+\caption{System Performance by Problem Scale (Intial Tests Results)}
+\begin{tabular}{lccc}
+\hline
+\textbf{Scale} & \textbf{Variables} & \textbf{Constraints} & \textbf{Solve Time} \\
+\hline
+Small (10N, 14D) & 560 & 500 & 5--20 sec \\
+Medium (20N, 28D) & 2,240 & 2,000 & 30--60 sec \\
+Large (50N, 28D) & 5,600 & 5,000 & 60--600 sec \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Evaluation and Limitations}
+
+The prototype generates test case schedules which meet time requirements (runs tests in under one minute for the majority of cases). The initial analysis validates essential constraints for mandatory tests (tests for coverage and work rules) while optimizing optional tests (cost and fairness) at a basic level. The results represented synthetic test data that requires validation through proper field testing in genuine hospital operation conditions.
+
+\vspace{0.5cm}
+Future improvements needed: (1) Deterministic approaches lack capacity for demand uncertainty treatment; actual production systems require integration of scenario-based and stochastic methods. (2) The homogeneous nurse model ignores qualification differences between caregivers yet realistic implementations must consider skill compatibility along with personal preferences and seniority frameworks and union contracts. (3) The solution depends on commercial Gurobi for large problem instances otherwise HiGHS offers free use but takes longer to resolve problems and produces less optimal results. (4) Current constraint checking misses some actual hospital policy requirements since implementation remains incomplete. (5) The system lacks any verification framework to validate if generated schedules meet both local regulatory codes and institutional policy requirements. (6) The system's performance and scalability for handling more than 100 nurses and multi-unit scheduling tasks has not yet been verified.
+
+\newpage
+\begin{multicols}{2}
+\section{References}
+
+\begin{itemize}[leftmargin=*]
+
+\item [1] Meredith P, Saville C, Chiara Dall'Ora, Weeks T, Wierzbicki S, Griffiths P. Estimating Nurse Workload Using a Predictive Model From Routine Hospital Data: Algorithm Development and Validation. JMIR Medical Informatics. 2025;13:e71666-e71666.
+
+\item [2] Moreno-Velásquez LF, Díaz-Serna FJ, Morillo-Torre D. Dynamic multicriteria optimization for the nurse scheduling problem. Decision Science Letters. 2025;14(2):457-472.
+
+\item [3] Aristeidis Mystakidis, Christos Koukaras, Paraskevas Koukaras, Konstantinos Kaparis, Stavrinides SG, Christos Tjortjis. Optimizing Nurse Rostering: A Case Study Using Integer Programming to Enhance Operational Efficiency and Care Quality. Healthcare. 2024;12(24):2545-2545.
+
+\item [4] Yasmine A, Yassine O, Farouk Y, Hicham C. Workload balancing for the nurse scheduling problem: A real-world case study from a French hospital. Socio-Economic Planning Sciences. 2024;95:102046.
+
+\item [5] Ceschia S, Luca Di Gaspero, Mazzaracchio V, Policante G, Schaerf A. Solving a real-world nurse rostering problem by Simulated Annealing. Operations Research for Health Care. 2023;36:100379-100379.
+
+\item [6] Chen Z, Causmaecker PD, Dou Y. A combined mixed integer programming and deep neural network-assisted heuristics algorithm for the nurse rostering problem. Applied Soft Computing. 2022;136:109919-109919.
+
+\item [7] Goh SL, Sze SN, Sabar NR, Abdullah S, Kendall G. A 2-Stage Approach for the Nurse Rostering Problem. IEEE Access. 2022;10:69591-69604.
+
+\item [8] Abayomi-Alli AA, Uzedu FO, Misra S, Abayomi-Alli OO, Arogundade OT. Hybrid Model of Genetic Algorithms and Tabu Search Memory for Nurse Scheduling Systems. International Journal of Service Science, Management, Engineering, and Technology. 2022;13(1):1–20.
+
+\item [9] Nobil AH, Sharifnia SME, Cárdenas-Barrón LE. Mixed integer linear programming problem for personnel multi-day shift scheduling: A case study in an Iran hospital. Alexandria Engineering Journal. 2022;61(1):419-426.
+
+\item [10] Abadi MQH, Rahmati S, Sharifi A, Ahmadi M. HSSAGA: Designation and scheduling of nurses for taking care of COVID-19 patients using novel method of Hybrid Salp Swarm Algorithm and Genetic Algorithm. Applied Soft Computing. 2021;108:107449.
+
+\item [11] Legrain A, Omer J, Rosat S. An online stochastic algorithm for a dynamic nurse scheduling problem. European Journal of Operational Research. 2020;285(1):196-210.
+
+\item [12] He F, Chaussalet T, Qu R. Controlling understaffing with conditional Value-at-Risk constraint for an integrated nurse scheduling problem under patient demand uncertainty. Operations Research Perspectives. 2019;6:100119.
+
+\item [13] Legrain A, Omer J, Rosat S. A rotation-based branch-and-price approach for the nurse scheduling problem. Mathematical Programming Computation. 2019;12(3):417-450.
+
+\item [14] Schoenfelder J, Bretthauer KM, Wright PD, Coe E. Nurse scheduling with quick-response methods: Improving hospital performance, nurse workload, and patient experience. European Journal of Operational Research. 2019;283(1):390-403.
+
+\item [15] Zanda S, Zuddas P, Seatzu C. Long term nurse scheduling via a decision support system based on linear integer programming: A case study at the University Hospital in Cagliari. Computers \& Industrial Engineering. 2018;126:337-347.
+
+\item [16] Rahimian E, Kerem Akartunalı, Levine J. A hybrid Integer Programming and Variable Neighbourhood Search algorithm to solve Nurse Rostering Problems. European Journal of Operational Research. 2016;258(2):411-423.
+
+\item [17] Bagheri M, Devin AG, Azra Izanloo. An application of stochastic programming method for nurse scheduling problem in real word hospital. Computers \& Industrial Engineering. 2016;96:192-200.
+
+\item [18] Wu TH, Yeh JY, Lee YM. A particle swarm optimization approach with refinement procedure for nurse rostering problem. Computers \& Operations Research. 2015;54:52-63.
+
+\item [19] Santos HG, Toffolo M, Rafael, Ribas S. Integer programming techniques for the nurse rostering problem. Annals of Operations Research. 2014;239(1):225-251.
+
+\item [20] Sarin SC, Sherali HD, Liao L. Minimizing conditional-value-at-risk for stochastic scheduling problems. Journal of Scheduling. 2013;17(1):5-15.
+
+\end{itemize}
+\end{multicols}
+
+\end{document}
