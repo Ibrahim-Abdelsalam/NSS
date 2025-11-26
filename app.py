@@ -21,10 +21,13 @@ st.set_page_config(
 # Custom CSS for clean professional interface
 st.markdown("""
     <style>
-    /* Hide Streamlit branding */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
+     /* Hide Streamlit branding but keep the header visible so the
+         sidebar toggle (hamburger) remains accessible when collapsed. */
+     #MainMenu {visibility: hidden;}
+     footer {visibility: hidden;}
+     /* NOTE: do NOT hide `header` - it contains the sidebar toggle button.
+         Hiding it prevents users from reopening the sidebar if previously
+         collapsed (causes intermittent "missing settings" reports). */
     
     /* Main Container */
     .main {
@@ -647,6 +650,38 @@ with st.sidebar:
 
 
 # --- 4. MAIN CONTENT AREA ---
+# --- SIDEBAR FALLBACK (handles intermittent missing sidebar) ---
+# Some Streamlit layouts or client-side collapses can make the sidebar
+# appear hidden to users. If the sidebar variables were not set (which
+# is a common symptom), show a compact fallback settings expander in
+# the main page so the app remains usable.
+if ('data_source' not in locals()) and ('data_source' not in st.session_state):
+    st.warning("⚙️ Settings sidebar not detected — showing quick settings here.")
+
+    with st.expander("Quick Settings (Sidebar fallback)", expanded=True):
+        fb_data_source = st.radio(
+            "Choose data input method:",
+            ["Use Sample Data (Quick Start)", "Upload Custom Data"],
+            key="fb_data_source"
+        )
+
+        if fb_data_source == "Use Sample Data (Quick Start)":
+            st.caption("Quick sample-data controls (same defaults as sidebar)")
+            fb_num_nurses = st.number_input("Number of Nurses", 5, 200, 10, 1, key="fb_num_nurses")
+            fb_num_days = st.number_input("Planning Days", 7, 90, 14, 1, key="fb_num_days")
+            fb_num_scenarios = st.slider("Demand Scenarios", 3, 300, 5, 1, key="fb_num_scenarios")
+
+            if st.button("🎲 Generate Sample Data (Fallback)", key="fb_generate"):
+                try:
+                    nurses_list, scenarios_df = m.generate_sample_data(fb_num_nurses, fb_num_days, fb_num_scenarios)
+                    st.session_state.nurses_list = nurses_list
+                    st.session_state.scenarios_df = scenarios_df
+                    st.success(f"Generated {len(nurses_list)} nurses with {len(scenarios_df)} demand records!")
+                except Exception as e:
+                    st.error(f"Failed to generate sample data: {e}")
+        else:
+            st.info("If you need to upload custom files, please open the sidebar (click the ⋮ menu at top-left if hidden) and use the Upload option there.")
+
 if solve_button and nurses_list is not None and scenarios_df is not None:
     
     # Build model parameters (filter out None values to use defaults)
@@ -1120,6 +1155,10 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
         """)
 
 # --- 5. DISPLAY RESULTS ---
+# Predeclare `tabs` to satisfy static analysis tools that may warn
+# about forward references in complex files. It is assigned later
+# when results are available.
+tabs = None
 if st.session_state.results is not None:
     results = st.session_state.results
     model_params = st.session_state.get('model_params', {})
