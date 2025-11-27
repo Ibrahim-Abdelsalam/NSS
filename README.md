@@ -2,37 +2,6 @@
 
 A web-based nurse scheduling prototype using Mixed Integer Linear Programming (MILP) to generate optimized schedules that balance cost minimization, staffing coverage, regulatory compliance, and fairness. Built with Python, PuLP, and Streamlit.
 
-## Key Features
-```
-NSS/
-├── app.py                          # Streamlit web application (main entry)
-├── model.py                        # Legacy functional optimization model
-├── model_oop.py                    # Object-oriented optimization model (current)
-├── solver_config.py                # Solver detection and configuration
-├── requirements.txt                # Python dependencies
-├── README.md                       # Project README (this file)
-├── LICENSE                         # Project license
-├── .gitattributes                  # Git attributes
-├── scripts/
-│   └── extract_ortec_data.py       # Utility script for external data extraction
-├── notebooks/                      # Analysis & tutorials
-│   ├── validation_analysis.ipynb
-│   ├── parameter_experiments.ipynb
-│   ├── oop_model_tutorial.ipynb
-│   └── data_exploration.ipynb
-├── docs/                           # Documentation and supporting files
-│   ├── ADVANCED_CONSTRAINTS.md
-│   ├── PROBLEM_SIZE_EXPLAINED.md
-│   ├── OOP_REFACTORING_SUMMARY.md
-│   ├── CONSTRAINTS_GUIDE.md
-│   ├── TECHNICAL_GUIDE.md
-│   ├── mathematical_model.tex
-│   └── ERROR_LOG.tex
-└── archive/                        # Legacy documentation and notes
-    └── [historical files]
-```
-5. View results as interactive charts or export to CSV/Excel
-
 ## Solver Configuration
 
 The system supports multiple optimization solvers:
