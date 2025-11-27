@@ -59,7 +59,12 @@ numpy==2.1.3           # Numerical computations
 
 The system has **4 main Python files**:
 
-### 1. `model_oop.py` (NEW - ~850 lines) ⭐
+### 1. `model_oop.py` (Deprecated / Removed)
+
+The original object-oriented implementation `model_oop.py` has been deprecated and
+removed from active use. The project now uses the functional API in `model.py`.
+Notebooks and documentation that reference `model_oop.py` should be updated to
+import from `model` (for example, use `from model import build_and_solve_model`).
 **Purpose:** Object-oriented optimization engine - clean, maintainable interface
 
 **Key Classes:**
@@ -126,7 +131,7 @@ def build_and_solve_model(nurses_list, scenarios_df, model_params,
     """
 ```
 
-**Note:** `app.py` now uses the OOP version (`model_oop.py`) but falls back to functional if needed.
+**Note:** `app.py` no longer depends on `model_oop.py` and uses the functional API in `model.py`.
 
 ---
 

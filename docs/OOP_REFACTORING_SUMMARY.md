@@ -69,240 +69,49 @@ status = model.solve(solver_name=solver_name)
 results = model.get_results()
 ```
 
-### `TECHNICAL_GUIDE.md`
-- Updated architecture section to document OOP design
-- Added class diagrams and usage examples
-- Explained benefits of OOP approach
+````markdown
+# `model_oop.py` — Deprecated / Removed
 
----
+The object-oriented implementation `model_oop.py` has been deprecated and is no
+longer the recommended entrypoint. The project now uses the functional API in
+`model.py` (for example, `build_and_solve_model` and `extract_results`).
 
-## 📊 Architecture Comparison
+Notes for maintainers and contributors:
 
-### Before: Functional/Procedural
-```
-Functions:
-  - build_and_solve_model(...)  # Everything in one function
-  - extract_results(...)          # Separate results extraction
-  - validate_results(...)         # Separate validation
-  
-Issues:
-  ❌ Long parameter lists (8+ parameters)
-  ❌ Global state and side effects
-  ❌ Hard to test individual components
-  ❌ Difficult to extend with new features
-  ❌ No parameter validation
-```
+- If you have scripts or notebooks that import `model_oop`, update them to use
+  the functional API in `model.py`.
+- The file `model_oop.py` remains in the repository as a small deprecation
+  stub that raises `ImportError` to fail fast and signal migration is required.
+- If you prefer to remove the file entirely, delete `model_oop.py` from the
+  repository after updating all dependent code.
 
-### After: Object-Oriented
-```
-Classes:
-  ModelParameters:
-    - Encapsulates all 15+ parameters
-    - Built-in validation
-    - Type hints and documentation
-    
-  NurseSchedulingModel:
-    - Manages model lifecycle
-    - Organized constraint methods
-    - Clean public interface
-    - Private helper methods
-    
-  OptimizationResults:
-    - Property-based access
-    - Type-safe results
-    - Convenient accessors
-    
-Benefits:
-  ✅ Encapsulation - data + methods together
-  ✅ Validation - automatic parameter checking
-  ✅ Testability - easy to mock and unit test
-  ✅ Extensibility - subclass for variants
-  ✅ Maintainability - organized code structure
-  ✅ Reusability - create multiple model instances
-```
+Examples (migration):
 
----
-
-## 🎯 OOP Benefits Demonstrated
-
-### 1. **Encapsulation**
-```python
-# All model state is encapsulated in the object
-model.nurses        # Input data
-model.params        # Parameters
-model.prob          # PuLP problem
-model.sr, model.so  # Decision variables
-model.status        # Solution status
-```
-
-### 2. **Separation of Concerns**
-```python
-# Each class has a single responsibility
-ModelParameters   → Parameter management & validation
-NurseSchedulingModel → Model building & solving
-OptimizationResults  → Results access & formatting
-```
-
-### 3. **Method Organization**
-```python
-class NurseSchedulingModel:
-    # Public interface
-    def build(self):        # Build model
-    def solve(self):        # Solve model
-    def get_results(self):  # Get results
-    
-    # Private implementation (organized by concern)
-    def _extract_sets(self):
-    def _create_variables(self):
-    def _add_constraints(self):
-    def _add_one_shift_per_day(self):
-    def _add_max_total_shifts(self):
-    def _add_min_regular_shifts(self):
-    # ... 15+ constraint methods
-```
-
-### 4. **Built-in Validation**
-```python
-# Parameters are validated on creation
-params = ModelParameters(c1=-10)  # ❌ Raises ValueError
-params = ModelParameters(n3=30, n1=20)  # ❌ Raises ValueError (n3 > n1)
-params = ModelParameters(sigma=1.5)  # ❌ Raises ValueError (sigma not in (0,1))
-```
-
-### 5. **Extensibility**
-```python
-# Easy to create model variants via inheritance
-class RobustNurseSchedulingModel(NurseSchedulingModel):
-    def build(self):
-        super().build()
-        self._add_robustness_constraints()
-    
-    def _add_robustness_constraints(self):
-        # Additional constraints for robust optimization
-        pass
-```
-
----
-
-## 🧪 Testing & Verification
-
-### Test Coverage
-✅ **Parameter validation** - All invalid parameters raise ValueErrors  
-✅ **Model building** - Variables and constraints created correctly  
-✅ **Solving** - Solver integration works  
-✅ **Results extraction** - All metrics match functional version  
-✅ **Identical output** - OOP cost = Functional cost (0.0000% difference)
-
-### Backward Compatibility
-- ✅ `model.py` (functional version) still exists
-- ✅ `app.py` uses OOP but falls back to functional if needed
-- ✅ All existing functionality preserved
-
----
-
-## 📈 Code Quality Improvements
-
-### Metrics
-| Metric | Before (Functional) | After (OOP) |
-|--------|--------------------:|------------:|
-| **Cyclomatic Complexity** | High (1 giant function) | Low (many small methods) |
-| **Testability** | Hard | Easy |
-| **Parameter Passing** | 8+ params per function | 1 object |
-| **Code Organization** | Linear (1648 lines) | Modular (classes) |
-| **Type Safety** | Basic | Strong (dataclasses) |
-| **Validation** | Manual | Automatic |
-
-### Design Patterns Used
-- ✅ **Builder Pattern** - `build()` method constructs complex object
-- ✅ **Strategy Pattern** - Different solvers via `solver_name` parameter
-- ✅ **Data Class Pattern** - `ModelParameters` with validation
-- ✅ **Facade Pattern** - Simple public interface hiding complexity
-
----
-
-## 🚀 How to Use
-
-### Simple Example
+Before (OOP):
 ```python
 from model_oop import NurseSchedulingModel, ModelParameters
-import pandas as pd
 
-# 1. Prepare data
-nurses = ['Alice', 'Bob', 'Charlie']
-scenarios = pd.DataFrame({
-    'scenario': [1, 1, 2, 2],
-    'day': [1, 1, 1, 1],
-    'shift': ['E', 'D', 'E', 'D'],
-    'demand': [2, 1, 2, 2]
-})
-
-# 2. Create parameters
-params = ModelParameters(
-    c1=100, c2=150, q_plus=200,
-    n1=20, n2=5, n3=10
-)
-
-# 3. Build and solve
-model = NurseSchedulingModel(nurses, scenarios, params)
+params = ModelParameters(c1=100, c2=150, q_plus=200, n1=24)
+model = NurseSchedulingModel(nurses_list, scenarios_df, params)
 model.build(model_type="SDM")
 status = model.solve()
-
-# 4. Get results
-if status == "Optimal":
-    results = model.get_results()
-    print(f"Total cost: ${results.total_cost:,.2f}")
-    print(results.schedule)
-```
-
-### Running the Streamlit App
-```bash
-streamlit run app.py
-```
-**No changes needed** - app.py automatically uses the new OOP implementation!
-
----
-
-## 📚 Documentation Updated
-
-- ✅ `TECHNICAL_GUIDE.md` - Updated with OOP architecture
-- ✅ `model_oop.py` - Full docstrings for all classes and methods
-- ✅ `test_oop.py` - Demonstrates usage and validates correctness
-- ✅ This summary document
-
----
-
-## ✨ Summary
-
-**Status:** ✅ **Complete and Tested**
-
-The codebase is now **professional, maintainable, and extensible** using modern object-oriented design while maintaining **100% backward compatibility** and **identical results** to the original functional implementation.
-
-**Key Achievement:** The system now demonstrates both **mathematical rigor** (correct optimization model) and **software engineering best practices** (clean OOP architecture).
-
----
-
-## 🎓 For Your Team Presentation
-
-**Highlight these points:**
-
-1. **"We refactored to OOP"** - Shows software engineering maturity
-2. **"100% tested"** - OOP and functional produce identical results
-3. **"Built-in validation"** - Catches errors before optimization runs
-4. **"Extensible design"** - Easy to add new constraints or model variants
-5. **"Production ready"** - Clean interfaces, proper error handling
-
-**Demo this code:**
-```python
-# Before: 8 parameters, hard to manage
-results = solve_nurse_scheduling(nurses, scenarios, c1, c2, q_plus, 
-                                 q_minus, n1, n2, n3, n4, ...)
-
-# After: Clean OOP interface
-params = ModelParameters(c1=100, c2=150, ...)
-model = NurseSchedulingModel(nurses, scenarios, params)
-model.build()
-model.solve()
 results = model.get_results()
 ```
 
-**This demonstrates professional software development skills! 🚀**
+After (Functional):
+```python
+from model import build_and_solve_model, extract_results
+
+prob, status = build_and_solve_model(nurses_list, scenarios_df, model_params, model_type, solver_name)
+results = extract_results(prob, nurses_list, scenarios_df, model_params)
+```
+
+If you'd like, I can:
+
+- Update example notebooks to use the functional API, or
+- Remove `model_oop.py` completely once you confirm notebooks/scripts are updated.
+
+---
+
+````
+  ✅ Validation - automatic parameter checking

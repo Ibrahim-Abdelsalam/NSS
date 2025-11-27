@@ -5,7 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import model as m  # Keep for backward compatibility
-from model_oop import NurseSchedulingModel, ModelParameters, OptimizationResults
+# `model_oop` removed — use functional API in `model.py` instead
 from io import BytesIO
 import json
 from solver_config import get_available_solvers, recommend_solver, get_installation_instructions
@@ -821,31 +821,27 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
         start_time = time.time()
         
         try:
-            # === NEW OOP APPROACH ===
-            # Create model parameters object
-            params = ModelParameters(**model_params)
-            
-            # Create model instance
-            model = NurseSchedulingModel(nurses_list, scenarios_df, params)
-            
-            # Build the model
-            model.build(model_type=model_type_code)
-            
-            # Solve the model with fallback mechanism
-            try:
-                status = model.solve(solver_name=selected_solver)
-            except Exception as solver_error:
-                # If Gurobi or other solver fails, fall back to CBC
-                if selected_solver != 'CBC':
-                    st.warning(f"⚠️ {selected_solver} encountered an error. Falling back to CBC...")
-                    st.warning(f"Error: {str(solver_error)}")
-                    selected_solver = 'CBC'
-                    status = model.solve(solver_name='CBC')
-                else:
-                    raise solver_error
-            
-            # Get the PuLP problem object for backward compatibility
-            prob = model.prob
+            # Use the functional API in `model.py` to build and solve the model.
+            # This avoids dependency on the legacy `model_oop` module.
+            prob, status = m.build_and_solve_model(
+                nurses_list,
+                scenarios_df,
+                model_params,
+                model_type=model_type_code,
+                solver_name=selected_solver
+            )
+
+            # If the selected solver did not return an optimal solution and
+            # we didn't already try CBC, attempt a single fallback to CBC.
+            if status != "Optimal" and selected_solver != 'CBC':
+                st.warning(f"⚠️ {selected_solver} did not return Optimal (status: {status}). Trying CBC as fallback...")
+                prob, status = m.build_and_solve_model(
+                    nurses_list,
+                    scenarios_df,
+                    model_params,
+                    model_type=model_type_code,
+                    solver_name='CBC'
+                )
         except MemoryError:
             progress_placeholder.empty()
             
@@ -934,12 +930,17 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
             
             # Extract results - Use OOP get_results() if model exists, otherwise fallback to functional
             extract_start = time.time()
-            if 'model' in locals() and hasattr(model, 'get_results'):
-                # New OOP approach
-                results_obj = model.get_results()
-                results = results_obj.to_dict()
+            # Prefer OOP results if available, otherwise use functional extractor
+            model_obj = locals().get('model', None)
+            if model_obj is not None and hasattr(model_obj, 'get_results'):
+                results_obj = model_obj.get_results()
+                # If get_results returns an object with to_dict(), use it
+                if hasattr(results_obj, 'to_dict'):
+                    results = results_obj.to_dict()
+                else:
+                    results = results_obj
             elif prob is not None:
-                # Fallback to functional approach
+                # Functional approach: extract results from PuLP problem
                 results = m.extract_results(prob, nurses_list, scenarios_df, model_params, model_type_code)
             else:
                 raise RuntimeError("No valid model or problem object available")
