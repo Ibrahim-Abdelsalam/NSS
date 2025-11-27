@@ -210,11 +210,3 @@ Total Cost = First-Stage Cost + Expected Recourse Cost
 | Scenario 2 Recourse | 0.5 × $800 | $400 |
 | Expected Recourse | $0 + $400 | $400 |
 | **TOTAL COST** | $600 + $400 | **$1,000** |
-
----
-
-Notes:
-- This calculation assumes the first-stage is required to meet baseline (Scenario 1) demand. If the model does not force baseline coverage, it may choose a different first-stage that trades off overtime vs. emergency staffing across scenarios.
-- If you run the solver with these inputs and configuration, you should see the solver produce a first-stage that matches the assignment above, with the expected total cost equal to $1,000 (modulo solver tolerances and small numerical differences).
-
-If you want, I can also (a) add this small test as a unit test in the repo that runs the solver and checks the computed objective, or (b) run the current model here and confirm the solver output matches these numbers.
