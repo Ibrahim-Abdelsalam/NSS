@@ -783,20 +783,10 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
     
     with col3:
         st.metric(
-            "Estimated Time",
-            estimation['time_display'],
-            help="Approximate solve time based on problem size"
+            "Problem Size",
+            estimation['time_category'],
+            help="Overall problem complexity (Fast / Medium / Slow)"
         )
-        
-        # Color-code based on category
-        if estimation['time_category'] == 'Fast':
-            st.success("⚡ Fast problem")
-        elif estimation['time_category'] == 'Medium':
-            st.info("⏱️ Medium problem")
-        elif estimation['time_category'] == 'Slow':
-            st.warning("⏳ Large problem")
-        else:
-            st.error("🐢 Very large problem")
     
     st.markdown("")  # Spacing
     

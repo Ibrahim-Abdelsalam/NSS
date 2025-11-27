@@ -3,34 +3,34 @@
 A web-based nurse scheduling prototype using Mixed Integer Linear Programming (MILP) to generate optimized schedules that balance cost minimization, staffing coverage, regulatory compliance, and fairness. Built with Python, PuLP, and Streamlit.
 
 ## Key Features
-
-- **MILP Optimization** - Automated schedule generation using mathematical optimization
-- **Constraint Satisfaction** - Enforces work regulations, coverage requirements, and fairness criteria
-- **Web Interface** - Accessible Streamlit-based UI requiring no programming knowledge
-- **Visualization** - Interactive Gantt charts and schedule heatmaps
-- **Export Options** - Generate schedules in CSV and Excel formats
-- **Dual Solver Support** - Uses Gurobi (commercial) or HiGHS (free) solver backends
-- **Configurable Constraints** - Adjustable maximum shifts, rest periods, and scheduling rules
-
-## Quick Start
-
-### 1. Install Dependencies
-```bash
-pip install -r requirements.txt
 ```
-
-### 2. Run the Application
-```bash
-streamlit run app.py
+NSS/
+├── app.py                          # Streamlit web application (main entry)
+├── model.py                        # Legacy functional optimization model
+├── model_oop.py                    # Object-oriented optimization model (current)
+├── solver_config.py                # Solver detection and configuration
+├── requirements.txt                # Python dependencies
+├── README.md                       # Project README (this file)
+├── LICENSE                         # Project license
+├── .gitattributes                  # Git attributes
+├── scripts/
+│   └── extract_ortec_data.py       # Utility script for external data extraction
+├── notebooks/                      # Analysis & tutorials
+│   ├── validation_analysis.ipynb
+│   ├── parameter_experiments.ipynb
+│   ├── oop_model_tutorial.ipynb
+│   └── data_exploration.ipynb
+├── docs/                           # Documentation and supporting files
+│   ├── ADVANCED_CONSTRAINTS.md
+│   ├── PROBLEM_SIZE_EXPLAINED.md
+│   ├── OOP_REFACTORING_SUMMARY.md
+│   ├── CONSTRAINTS_GUIDE.md
+│   ├── TECHNICAL_GUIDE.md
+│   ├── mathematical_model.tex
+│   └── ERROR_LOG.tex
+└── archive/                        # Legacy documentation and notes
+    └── [historical files]
 ```
-
-The app will automatically open in your browser at **http://localhost:8501**
-
-### 3. Generate a Schedule
-1. Upload nurse availability CSV or use sample data
-2. Define shift requirements
-3. Configure constraints (max consecutive shifts, rest periods, etc.)
-4. Click optimize to generate schedule
 5. View results as interactive charts or export to CSV/Excel
 
 ## Solver Configuration
@@ -95,7 +95,6 @@ NSS/
 │   ├── model_oop.py              # Object-oriented model implementation
 │   ├── solver_config.py          # Solver configuration and selection
 │   ├── requirements.txt          # Python dependencies
-│   ├── methodology.tex           # LaTeX methodology document
 │   ├── README.md                 # This file
 │   └── LICENSE                   # Project license
 │
@@ -204,9 +203,6 @@ Referenced literature includes works on:
 - **ReportLab 4.0+** - PDF generation (optional)
 
 ## Documentation
-
-### Project Documentation
-- **[methodology.tex](methodology.tex)** - LaTeX methodology document describing the prototype
 
 ### Technical Documentation
 - **[docs/CONSTRAINTS_GUIDE.md](docs/CONSTRAINTS_GUIDE.md)** - Detailed constraint explanations
