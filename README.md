@@ -2,6 +2,46 @@
 
 A web-based nurse scheduling prototype using Mixed Integer Linear Programming (MILP) to generate optimized schedules that balance cost minimization, staffing coverage, regulatory compliance, and fairness. Built with Python, PuLP, and Streamlit.
 
+## Key Features
+
+- **MILP Optimization** - Automated schedule generation using mathematical optimization
+- **Constraint Satisfaction** - Enforces work regulations, coverage requirements, and fairness criteria
+- **Web Interface** - Accessible Streamlit-based UI requiring no programming knowledge
+- **Visualization** - Interactive Gantt charts and schedule heatmaps
+- **Export Options** - Generate schedules in CSV and Excel formats
+- **Dual Solver Support** - Uses Gurobi (commercial) or HiGHS (free) solver backends
+- **Configurable Constraints** - Adjustable maximum shifts, rest periods, and scheduling rules
+
+## Recent Updates (Nov 26, 2025)
+
+- **Sidebar visibility fix:** Resolved intermittent missing settings menu by ensuring the Streamlit `header` (which contains the sidebar toggle) remains visible. This prevents the sidebar from being unrecoverable when collapsed.
+- **Progress indicator fix:** Removed background-threaded progress updates (which caused `NoSessionContext` errors in Streamlit) and replaced them with a thread-safe static progress placeholder (and recommended `st.spinner()` where appropriate).
+- **Solver selection & fallback:** Added manual solver selection in the UI and an automatic fallback to `CBC` if the selected solver fails at runtime.
+- **Gurobi parameter fix:** Corrected how Gurobi parameters are passed via PuLP (use keyword args like `Threads=8` instead of an `options` list).
+- **Documentation added:** New documentation files added in `docs/` including `PROBLEM_SIZE_EXPLAINED.md` (detailed variable/constraint breakdown) and `ERROR_LOG.tex` (comprehensive error log and fixes).
+
+
+## Quick Start
+
+### 1. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Run the Application
+```bash
+streamlit run app.py
+```
+
+The app will automatically open in your browser at **http://localhost:8501**
+
+### 3. Generate a Schedule
+1. Upload nurse availability CSV or use sample data
+2. Define shift requirements
+3. Configure constraints (max consecutive shifts, rest periods, etc.)
+4. Click optimize to generate schedule
+5. View results as interactive charts or export to CSV/Excel
+
 ## Solver Configuration
 
 The system supports multiple optimization solvers:
@@ -58,37 +98,29 @@ For Gurobi (faster performance), obtain academic license at: https://www.gurobi.
 
 ```
 NSS/
-├── Core Application Files
-│   ├── app.py                    # Streamlit web application
-│   ├── model.py                  # MILP optimization model
-│   ├── model_oop.py              # Object-oriented model implementation
-│   ├── solver_config.py          # Solver configuration and selection
-│   ├── requirements.txt          # Python dependencies
-│   ├── README.md                 # This file
-│   └── LICENSE                   # Project license
-│
-├── notebooks/                    # Jupyter notebooks for analysis
-│   └── [analysis notebooks]
-│
-├── scripts/                      # Utility scripts
-│   └── [helper scripts]
-│
-├── tests/                        # Test suite
-│   └── test_oop.py               # Unit tests
-│
-├── data/                         # Sample datasets
-│   ├── sample_nurses.csv         # Sample nurse roster
-│   └── sample_scenarios.csv      # Sample shift requirements
-│
-├── docs/                         # Documentation
-│   ├── ADVANCED_CONSTRAINTS.md       # Advanced constraint details
-│   ├── CONSTRAINTS_GUIDE.md          # Constraint catalog
-│   ├── OOP_REFACTORING_SUMMARY.md    # Code architecture overview
-│   ├── TECHNICAL_GUIDE.md            # Implementation details
-│   ├── mathematical_model.tex        # LaTeX math formulation
-│   └── [research paper PDF]          # Reference paper
-│
-└── archive/                      # Legacy documentation
+├── app.py                          # Streamlit web application (main entry)
+├── model.py                        # Legacy functional optimization model
+├── solver_config.py                # Solver detection and configuration
+├── requirements.txt                # Python dependencies
+├── README.md                       # Project README (this file)
+├── LICENSE                         # Project license
+├── .gitattributes                  # Git attributes
+├── scripts/
+│   └── extract_ortec_data.py       # Utility script for external data extraction
+├── notebooks/                      # Analysis & tutorials
+│   ├── validation_analysis.ipynb
+│   ├── parameter_experiments.ipynb
+│   ├── oop_model_tutorial.ipynb
+│   └── data_exploration.ipynb
+├── docs/                           # Documentation and supporting files
+│   ├── ADVANCED_CONSTRAINTS.md
+│   ├── PROBLEM_SIZE_EXPLAINED.md
+│   ├── OOP_REFACTORING_SUMMARY.md
+│   ├── CONSTRAINTS_GUIDE.md
+│   ├── TECHNICAL_GUIDE.md
+│   ├── mathematical_model.tex
+│   └── ERROR_LOG.tex
+└── archive/                        # Legacy documentation and notes
     └── [historical files]
 ```
 
@@ -111,26 +143,6 @@ NSS/
 - **Shift Types** - Early, Day, Late, Night (4 types standard)
 
 ## Performance Benchmarks
-
-### Solve Times (Initial Tests)
-
-**Small Problem (10 nurses, 14 days)**
-- Variables: ~560
-- Constraints: ~500
-- Gurobi: 1-5 seconds
-- HiGHS: 5-20 seconds
-
-**Medium Problem (20 nurses, 28 days)**
-- Variables: ~2,240
-- Constraints: ~2,000
-- Gurobi: 5-20 seconds
-- HiGHS: 30-60 seconds
-
-**Large Problem (50 nurses, 28 days)**
-- Variables: ~5,600
-- Constraints: ~5,000
-- Gurobi: 20-60 seconds
-- HiGHS: 60-600 seconds
 
 **Note:** These are preliminary results based on synthetic test data. Performance will vary based on constraint complexity and hardware specifications.
 
