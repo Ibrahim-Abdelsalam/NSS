@@ -262,11 +262,11 @@ with st.sidebar:
         
         col1, col2 = st.columns(2)
         with col1:
-            num_nurses = st.number_input("Number of Nurses", 5, 200, 10, 1)
+            num_nurses = st.number_input("Number of Nurses", 1, 200, 10, 1)
         with col2:
-            num_days = st.number_input("Planning Days", 7, 90, 14, 1)
+            num_days = st.number_input("Planning Days", 1, 90, 14, 1)
         
-        num_scenarios = st.slider("Demand Scenarios", 3, 300, 5, 1)
+        num_scenarios = st.slider("Demand Scenarios", 1, 300, 5, 1)
         
         if st.button("🎲 Generate Sample Data", type="secondary", use_container_width=True):
             nurses_list, scenarios_df = m.generate_sample_data(num_nurses, num_days, num_scenarios)
@@ -450,7 +450,7 @@ with st.sidebar:
     st.header("📋 Work Rules")
     
     with st.expander("⚖️ Basic Shift Constraints", expanded=True):
-        n1 = st.slider("Max Total Shifts ($n_1$)", 5, 30, 15, 1)
+        n1 = st.slider("Max Total Shifts ($n_1$)", 1, 30, 15, 1)
         n2 = st.slider("Max Night Shifts ($n_2$)", 1, 15, 5, 1)
         n3 = st.slider("Min Regular Shifts ($n_3$)", 1, 20, 10, 1)
     
