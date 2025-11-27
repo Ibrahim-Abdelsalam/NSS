@@ -10,7 +10,7 @@ def validate_capacity_feasibility(nurses_list: List[str], scenarios_df: pd.DataF
     """
     Validate if the problem is practically feasible by checking:
     - Total nurse capacity vs baseline demand
-    - Daily capacity vs daily demand peaks
+    - Daily capacity vs daily demands
 
     Returns:
         Tuple[is_feasible: bool, message: str, details: dict]
@@ -237,23 +237,22 @@ def build_and_solve_model(
     )
 
     if not is_feasible:
-        error_msg = f"""
-🚨 PRACTICAL INFEASIBILITY DETECTED
+        error_msg = f"""🚨 PRACTICAL INFEASIBILITY DETECTED
 
 {feasibility_msg}
 
 📊 Problem Details:
-   • Nurses: {feasibility_details['num_nurses']}
-   • Max shifts per nurse: {feasibility_details['max_shifts_per_nurse']}
-   • Total capacity: {feasibility_details['total_capacity']} shifts
-   • Baseline demand: {feasibility_details['baseline_demand']} shifts
-   • Utilization: {feasibility_details['utilization_percent']:.1f}%
+   \n• Nurses: {feasibility_details['num_nurses']}
+   \n• Max shifts per nurse: {feasibility_details['max_shifts_per_nurse']}
+   \n• Total capacity: {feasibility_details['total_capacity']} shifts
+   \n• Baseline demand: {feasibility_details['baseline_demand']} shifts
+   \n• Utilization: {feasibility_details['utilization_percent']:.1f}%
 
 💡 Suggested Solutions:
-   • Increase number of nurses
-   • Increase maximum shifts per nurse (n1)
-   • Reduce baseline demand requirements
-   • Use emergency staff pool for excess demand
+   \n• Increase number of nurses
+   \n• Increase maximum shifts per nurse (n1)
+   \n• Reduce baseline demand requirements
+   \n• Use emergency staff pool for excess demand
 """
         raise ValueError(error_msg)
     
@@ -287,6 +286,11 @@ def build_and_solve_model(
     so = pulp.LpVariable.dicts("OvertimeShift", 
                               (I_nurses, J_days, K_shifts), 
                               cat=pulp.LpBinary)
+
+    # Indicator variables: SR_i = 1 if nurse i works any regular shift
+    #                      SO_i = 1 if nurse i works any overtime shift
+    SR = pulp.LpVariable.dicts("SR", I_nurses, cat=pulp.LpBinary)
+    SO = pulp.LpVariable.dicts("SO", I_nurses, cat=pulp.LpBinary)
     
     # ============================================================================
     # SOFT CONSTRAINT DEVIATION VARIABLES
@@ -377,17 +381,18 @@ def build_and_solve_model(
     # --- 4. DEFINE STAGE 2 VARIABLES (y^ω) ---
     # alpha_jk_omega: Number of emergency shifts ADDED for scenario ω on day j, shift k
     # Corresponds to: α_{jk}^ω ≥ 0 in the mathematical model
+    # Second-stage recourse variables: integer counts to match paper's integer recourse
     alpha = pulp.LpVariable.dicts("AddShift", 
                                  (J_days, K_shifts, W_scenarios), 
                                  lowBound=0, 
-                                 cat=pulp.LpContinuous)
+                                 cat=pulp.LpInteger)
 
     # beta_jk_omega: Number of shifts CANCELLED for scenario ω on day j, shift k
-    # Corresponds to: β_{jk}^ω ≥ 0 in the mathematical model
+    # Corresponds to: β_{jk}^ω ≥ 0 and integer in the mathematical model
     beta = pulp.LpVariable.dicts("CancelShift", 
                                 (J_days, K_shifts, W_scenarios), 
                                 lowBound=0, 
-                                cat=pulp.LpContinuous)
+                                cat=pulp.LpInteger)
 
     # ============================================================================
     # CVaR VARIABLES (CONDITIONAL VALUE-AT-RISK)
@@ -488,6 +493,43 @@ def build_and_solve_model(
                 pulp.lpSum(sr[i][j][k] + so[i][j][k] for k in K_shifts) <= 1,
                 f"OneShiftPerDay_{i}_{j}"
             )
+
+    # ------------------------------------------------------------------------
+    # Indicator linking constraints: connect SR/SO indicators to daily assignments
+    # SR_i = 1 if nurse i has any regular shifts; SO_i = 1 if nurse i has any overtime
+    # Enforce: for all i,j,k: sr_ijk <= SR_i and so_ijk <= SO_i
+    #          and SR_i <= sum_jk sr_ijk, SO_i <= sum_jk so_ijk
+    #          and SO_i <= SR_i (if overtime used then SR must be 1)
+    # ------------------------------------------------------------------------
+    for i in I_nurses:
+        # SR definition: must be 0 if no sr assigned, can be 1 otherwise
+        prob += (
+            SR[i] <= pulp.lpSum(sr[i][j][k] for j in J_days for k in K_shifts),
+            f"SR_Def_{i}"
+        )
+        # SO definition
+        prob += (
+            SO[i] <= pulp.lpSum(so[i][j][k] for j in J_days for k in K_shifts),
+            f"SO_Def_{i}"
+        )
+
+        # Link individual assignments to indicators
+        for j in J_days:
+            for k in K_shifts:
+                prob += (
+                    sr[i][j][k] <= SR[i],
+                    f"SR_Link_{i}_{j}_{k}"
+                )
+                prob += (
+                    so[i][j][k] <= SO[i],
+                    f"SO_Link_{i}_{j}_{k}"
+                )
+
+        # If overtime indicator is set, regular indicator must be set as well
+        prob += (
+            SO[i] <= SR[i],
+            f"SO_impl_SR_{i}"
+        )
 
     # ============================================================================
     # CONSTRAINTS 2-5: Min/Max Shifts per Shift Type (ADVANCED)

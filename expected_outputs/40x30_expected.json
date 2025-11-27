@@ -1,0 +1,47 @@
+{
+  "status": "Optimal",
+  "cost_breakdown": {
+    "total_cost": 38560.0,
+    "stage1_cost": 31000.0,
+    "stage1_total": 31000.0,
+    "stage1_regular_cost": 31000.0,
+    "stage1_overtime_cost": 0.0,
+    "stage2_cost": 7560.0,
+    "stage2_expected_cost": 7560.0,
+    "total_regular_shifts": 310,
+    "total_overtime_shifts": 0,
+    "avg_cost_per_nurse": 964.0
+  },
+  "scenario_df": [
+    {
+      "scenario": 1,
+      "shortage_shifts": 6.0,
+      "overage_shifts": 0,
+      "recourse_cost": 1200.0
+    },
+    {
+      "scenario": 2,
+      "shortage_shifts": 3.0,
+      "overage_shifts": 0,
+      "recourse_cost": 600.0
+    },
+    {
+      "scenario": 3,
+      "shortage_shifts": 6.0,
+      "overage_shifts": 0,
+      "recourse_cost": 1200.0
+    },
+    {
+      "scenario": 4,
+      "shortage_shifts": 8.0,
+      "overage_shifts": 0,
+      "recourse_cost": 1600.0
+    },
+    {
+      "scenario": 5,
+      "shortage_shifts": 7.0,
+      "overage_shifts": 0,
+      "recourse_cost": 1400.0
+    }
+  ]
+}

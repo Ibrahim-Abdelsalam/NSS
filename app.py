@@ -295,24 +295,101 @@ with st.sidebar:
         if nurse_file and scenario_file:
             try:
                 # ============================================================
-                # LOAD AND VALIDATE NURSE FILE
+                # LOAD AND VALIDATE NURSE FILE (robust parsing)
+                # Supports: one-name-per-line, single-line comma-separated list, or small CSV
                 # ============================================================
-                nurses_df = pd.read_csv(nurse_file, header=None)
-                nurses_list = nurses_df.iloc[:, 0].tolist()
-                
-                # Validate nurse list
+                nurses_list = []
+                try:
+                        # Ensure file pointer is at start (uploaded file may have been read)
+                        try:
+                            nurse_file.seek(0)
+                        except Exception:
+                            pass
+
+                        # First try: read with pandas (common case: one name per line)
+                        try:
+                            nurses_df = pd.read_csv(nurse_file, header=None)
+                            # If dataframe has one column, assume one name per row
+                            if nurses_df.shape[1] == 1:
+                                nurses_list = nurses_df.iloc[:, 0].astype(str).tolist()
+                            else:
+                                # If multiple columns (e.g., single-row comma-separated), flatten values
+                                vals = nurses_df.values.flatten()
+                                nurses_list = [str(v).strip() for v in vals if str(v).strip()]
+                        except pd.errors.EmptyDataError:
+                            # re-raise to outer handler to use raw parsing
+                            raise
+                except pd.errors.EmptyDataError:
+                    # File may be empty according to pandas or not standard CSV - fallthrough to raw parsing below
+                    pass
+
+                except Exception:
+                    # Generic exception during pandas parsing — fall through to raw parsing
+                    pass
+
+                # ---------------------------
+                # RAW PARSING FALLBACK
+                # ---------------------------
+                if not nurses_list:
+                    try:
+                        # Reset pointer then get raw bytes/text
+                        try:
+                            nurse_file.seek(0)
+                        except Exception:
+                            pass
+
+                        # UploadedFile in Streamlit exposes getvalue(); try that first
+                        if hasattr(nurse_file, 'getvalue'):
+                            raw = nurse_file.getvalue()
+                        else:
+                            raw = nurse_file.read()
+
+                        if isinstance(raw, (bytes, bytearray)):
+                            try:
+                                text = raw.decode('utf-8')
+                            except Exception:
+                                text = raw.decode('latin-1', errors='ignore')
+                        else:
+                            text = str(raw)
+
+                        text = text.strip()
+                        if not text:
+                            nurses_list = []
+                        else:
+                            # If a single-line comma list, split on commas
+                            if '\n' not in text and ',' in text:
+                                nurses_list = [s.strip() for s in text.split(',') if s.strip()]
+                            else:
+                                # Use csv module to robustly parse rows (handles quoted values)
+                                import csv
+                                from io import StringIO
+                                reader = csv.reader(StringIO(text))
+                                rows = list(reader)
+                                if not rows:
+                                    nurses_list = []
+                                else:
+                                    # If each row is single column, take first col per row
+                                    if all(len(r) == 1 for r in rows):
+                                        nurses_list = [r[0].strip() for r in rows if r and r[0].strip()]
+                                    else:
+                                        # Flatten and dedupe
+                                        flat = [cell.strip() for r in rows for cell in r if cell.strip()]
+                                        nurses_list = flat
+                    except Exception as e:
+                        st.error(f"❌ Failed to parse nurse file: {e}")
+                        st.stop()
+
+                # Final cleaning and validation
+                nurses_list = [n for n in nurses_list if str(n).strip()]
                 if len(nurses_list) == 0:
-                    st.error("❌ Nurse file is empty!")
+                    st.error("❌ Nurse file is empty or could not be parsed. Ensure it contains one name per line or a comma-separated list.")
                     st.stop()
-                
+
                 # Check for duplicates
                 if len(nurses_list) != len(set(nurses_list)):
                     duplicates = [n for n in nurses_list if nurses_list.count(n) > 1]
                     st.warning(f"⚠️ Duplicate nurse names found: {set(duplicates)}")
-                
-                # Remove any empty strings
-                nurses_list = [n for n in nurses_list if str(n).strip()]
-                
+
                 st.success(f"✓ Loaded {len(nurses_list)} nurses")
                 
                 # ============================================================
@@ -452,7 +529,7 @@ with st.sidebar:
     with st.expander("⚖️ Basic Shift Constraints", expanded=True):
         n1 = st.slider("Max Total Shifts ($n_1$)", 1, 30, 15, 1)
         n2 = st.slider("Max Night Shifts ($n_2$)", 1, 15, 5, 1)
-        n3 = st.slider("Min Regular Shifts ($n_3$)", 1, 20, 10, 1)
+        n3 = st.slider("Min Regular Shifts ($n_3$)", 0, 20, 10, 1)
     
     # NEW: Advanced constraints for university project
     with st.expander("🏖️ Weekend Constraints (Advanced)", expanded=False):
