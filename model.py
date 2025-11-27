@@ -5,6 +5,68 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Tuple, Optional, Any, Union
 from solver_config import create_solver
 
+
+def validate_capacity_feasibility(nurses_list: List[str], scenarios_df: pd.DataFrame, model_params: Dict[str, Any]) -> Tuple[bool, str, Dict[str, Any]]:
+    """
+    Validate if the problem is practically feasible by checking:
+    - Total nurse capacity vs baseline demand
+    - Daily capacity vs daily demand peaks
+
+    Returns:
+        Tuple[is_feasible: bool, message: str, details: dict]
+    """
+    num_nurses = len(nurses_list)
+    n1 = model_params.get('n1', 15)
+    total_capacity = num_nurses * n1
+
+    if scenarios_df is None or len(scenarios_df) == 0:
+        return False, "❌ Scenario data missing or empty", {
+            'num_nurses': num_nurses,
+            'max_shifts_per_nurse': n1,
+            'total_capacity': total_capacity,
+            'baseline_demand': 0,
+            'peak_daily_demand': 0,
+            'utilization_percent': 0,
+            'shortage_shifts': 0
+        }
+
+    # baseline scenario = smallest scenario id
+    baseline_scenario = min(scenarios_df['scenario'].unique())
+    baseline_demand = int(scenarios_df[scenarios_df['scenario'] == baseline_scenario]['demand'].sum())
+
+    # peak daily demand across all scenarios
+    daily_demands = scenarios_df.groupby(['scenario', 'day'])['demand'].sum()
+    peak_daily_demand = int(daily_demands.max())
+
+    is_feasible = True
+    issues = []
+
+    if baseline_demand > total_capacity:
+        is_feasible = False
+        issues.append(f"❌ Baseline demand ({baseline_demand} shifts) exceeds total nurse capacity ({total_capacity} shifts)")
+        issues.append(f"   → Shortage: {baseline_demand - total_capacity} shifts")
+
+    if peak_daily_demand > num_nurses:
+        is_feasible = False
+        issues.append(f"❌ Peak daily demand ({peak_daily_demand} nurses) exceeds available nurses ({num_nurses})")
+        issues.append("   → Some days require more nurses than available")
+
+    utilization = (baseline_demand / total_capacity) * 100 if total_capacity > 0 else 0
+
+    details = {
+        'num_nurses': num_nurses,
+        'max_shifts_per_nurse': n1,
+        'total_capacity': total_capacity,
+        'baseline_demand': baseline_demand,
+        'peak_daily_demand': peak_daily_demand,
+        'utilization_percent': utilization,
+        'shortage_shifts': max(0, baseline_demand - total_capacity)
+    }
+
+    message = "\n".join(issues) if issues else "✅ Problem is practically feasible"
+
+    return is_feasible, message, details
+
 def build_and_solve_model(
     nurses_list: List[str], 
     scenarios_df: pd.DataFrame, 
@@ -168,6 +230,32 @@ def build_and_solve_model(
     night_rest_enabled = model_params.get('night_rest_enabled', False)
     min_consecutive_nights = model_params.get('min_consecutive_nights', 2)  # Constraint 10
     days_off_after_nights = model_params.get('days_off_after_nights', 2)   # Constraint 11
+
+    # --- FEASIBILITY VALIDATION (practical checks before building model) ---
+    is_feasible, feasibility_msg, feasibility_details = validate_capacity_feasibility(
+        I_nurses, scenarios_df, model_params
+    )
+
+    if not is_feasible:
+        error_msg = f"""
+🚨 PRACTICAL INFEASIBILITY DETECTED
+
+{feasibility_msg}
+
+📊 Problem Details:
+   • Nurses: {feasibility_details['num_nurses']}
+   • Max shifts per nurse: {feasibility_details['max_shifts_per_nurse']}
+   • Total capacity: {feasibility_details['total_capacity']} shifts
+   • Baseline demand: {feasibility_details['baseline_demand']} shifts
+   • Utilization: {feasibility_details['utilization_percent']:.1f}%
+
+💡 Suggested Solutions:
+   • Increase number of nurses
+   • Increase maximum shifts per nurse (n1)
+   • Reduce baseline demand requirements
+   • Use emergency staff pool for excess demand
+"""
+        raise ValueError(error_msg)
     
     # Define unwanted shift patterns (K' in the paper)
     # These are consecutive shift combinations to avoid
@@ -426,6 +514,22 @@ def build_and_solve_model(
                 prob += (
                     pulp.lpSum(sr[i][j][shift_type] + so[i][j][shift_type] for j in J_days) <= shift_max,
                     f"MaxShifts_{shift_type}_{i}"
+                )
+
+    # ============================================================================
+    # CONSTRAINT 5: BASELINE COVERAGE REQUIREMENT (FROM PAPER)
+    # Mathematical: Σ_i (sr_ijk + so_ijk) ≥ R_jk  ∀ j,k  (using baseline scenario)
+    # Use the first (minimum) scenario as baseline demand
+    # This ensures first-stage assignments meet baseline demand
+    # ============================================================================
+    baseline_scenario = min(W_scenarios)
+    for j in J_days:
+        for k in K_shifts:
+            baseline_val = R_demand.get((j, k, baseline_scenario), 0)
+            if baseline_val > 0:
+                prob += (
+                    pulp.lpSum(sr[i][j][k] + so[i][j][k] for i in I_nurses) >= baseline_val,
+                    f"BaselineCoverage_{j}_{k}"
                 )
 
     # ============================================================================
@@ -1125,14 +1229,55 @@ def extract_results(prob: pulp.LpProblem, nurses_list: List[str], scenarios_df: 
                     })
     
     schedule_df = pd.DataFrame(schedule_data)
-    
+    # Explain solution strategy relative to capacity/demand
+    try:
+        feasibility_ok, feasibility_msg, feasibility_details = validate_capacity_feasibility(nurses_list, scenarios_df, model_params)
+    except Exception:
+        feasibility_details = {
+            'total_capacity': len(nurses_list) * model_params.get('n1', 15),
+            'baseline_demand': scenarios_df[scenarios_df['scenario'] == min(scenarios_df['scenario'])]['demand'].sum() if len(scenarios_df) > 0 else 0
+        }
+
+    def explain_solution_strategy(results: Dict[str, Any], feasibility_details: Dict[str, Any]) -> str:
+        """
+        Generate human-readable explanation of the solution strategy
+        """
+        capacity = feasibility_details.get('total_capacity', 0)
+        demand = feasibility_details.get('baseline_demand', 0)
+        # average emergency shifts per scenario (if available)
+        emergency_shifts = 0
+        try:
+            emergency_shifts = float(results.get('scenario_df', pd.DataFrame())['shortage_shifts'].mean())
+        except Exception:
+            emergency_shifts = 0
+
+        if demand > capacity:
+            return f"""
+📈 SOLUTION STRATEGY EXPLANATION:
+
+Since baseline demand ({demand} shifts) exceeds capacity ({capacity} shifts), the model uses:
+
+• Stage 1: Full capacity utilization ({capacity} shifts at regular cost)
+• Stage 2: Emergency staff for remaining {demand - capacity:.0f}+ shifts
+
+This follows the paper's two-stage approach: make cost-effective first-stage decisions,
+then handle excess demand with more expensive but flexible emergency staff.
+"""
+        else:
+            return "✅ Solution uses optimal balance of regular, overtime, and emergency staff."
+
+    explanation = explain_solution_strategy({
+        'scenario_df': scenario_df
+    }, feasibility_details)
+
     return {
         "roster_df": roster_df,
         "schedule_df": schedule_df,
         "cost_breakdown": cost_breakdown,
         "risk_metrics": risk_metrics,
         "scenario_df": scenario_df,
-        "coverage_df": coverage_df
+        "coverage_df": coverage_df,
+        "solution_explanation": explanation
     }
 
 
@@ -1353,24 +1498,14 @@ def validate_parameters(model_params: Dict[str, Any], nurses_list: List[str], sc
     
     # 2. Check: Feasibility - compare capacity vs demand
     if scenarios_df is not None and len(scenarios_df) > 0 and nurses_list:
-        total_capacity = len(nurses_list) * n1
-        
-        # Calculate max simultaneous demand (max needed on any single day across all shifts)
-        max_daily_demand = scenarios_df.groupby(['scenario', 'day'])['demand'].sum().max()
-        
-        # Calculate average demand per scenario
-        avg_scenario_demand = scenarios_df.groupby('scenario')['demand'].sum().mean()
-        
-        if max_daily_demand > total_capacity:
-            warnings.append(f"⚠️ Max daily demand ({max_daily_demand:.0f} shifts) exceeds total nurse capacity ({total_capacity} shifts)")
-            warnings.append(f"   → Expect heavy use of emergency staff (high q_plus costs)")
-        
-        # Check if average demand is reasonable
-        utilization = avg_scenario_demand / total_capacity if total_capacity > 0 else 0
-        if utilization > 0.9:
-            warnings.append(f"⚠️ High capacity utilization ({utilization*100:.1f}%) - schedule may be very tight")
-        elif utilization < 0.3:
-            warnings.append(f"⚠️ Low capacity utilization ({utilization*100:.1f}%) - may have many idle nurses")
+        # Use the new feasibility validator to provide clearer diagnostics
+        feasible, msg, details = validate_capacity_feasibility(nurses_list, scenarios_df, model_params)
+        if not feasible:
+            warnings.append(f"⚠️ Practical infeasibility: {msg}")
+        # Add critical warning if utilization > 100%
+        if details.get('utilization_percent', 0) > 100:
+            warnings.append("🚨 CRITICAL: Demand exceeds capacity - problem is mathematically infeasible")
+            warnings.append("   Consider adjusting parameters or using emergency staff pool")
     
     # 3. Check: Minimum shifts might be too high
     if n3 > 0 and n1 > 0:
