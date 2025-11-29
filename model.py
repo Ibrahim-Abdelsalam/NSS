@@ -191,8 +191,8 @@ def build_and_solve_model(
     # --- 1. EXTRACT DATA & CREATE SETS ---
     
     # Get sets from the scenario data
-    I_nurses = nurses_list
-    J_days = scenarios_df['day'].unique()
+    I_nurses = nurses_list  
+    J_days = sorted(scenarios_df['day'].unique(), key=int)
     K_shifts = scenarios_df['shift'].unique()
     W_scenarios = scenarios_df['scenario'].unique()
     
@@ -336,7 +336,7 @@ def build_and_solve_model(
         # WHY WE NEED THIS:
         #   Nurses value full weekends (both days off) more than scattered days off
         #   Guaranteeing n4 complete weekends improves work-life balance
-        J_days_sorted = sorted(list(J_days))
+        J_days_sorted = sorted(list(J_days), key=int)
         for idx, j in enumerate(J_days_sorted):
             day_date = base_date + timedelta(days=int(j) - 1)
             is_saturday = day_date.weekday() == 5  # weekday() returns 5 for Saturday
@@ -1512,6 +1512,11 @@ def validate_parameters(model_params: Dict[str, Any], nurses_list: List[str], sc
         
         if n4 > max_possible_weekends:
             errors.append(f"❌ Cannot require {n4} complete weekends off in only {num_days} days (max possible: {max_possible_weekends})")
+        
+        # Check if start_date is provided when n4 > 0
+        start_date = model_params.get('start_date', None)
+        if start_date is None:
+            warnings.append(f"⚠️ Weekend constraint (n4={n4}) requires 'start_date' parameter. Constraint will be DISABLED without a start date (format: 'YYYY-MM-DD')")
     
     # 6. Check: Night rest constraints
     night_rest_enabled = model_params.get('night_rest_enabled', False)

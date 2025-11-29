@@ -193,10 +193,16 @@ st.markdown("""
         border-radius: 10px !important;
     }
     
-    /* Dataframe - Clean */
+    /* Dataframe - Purple Theme */
     .dataframe {
         font-size: 1rem !important;
         border-radius: 10px !important;
+    }
+    
+    /* Purple gradient for dataframe headers */
+    [data-testid="stDataframe"] {
+        --dataframe-header-bg: #6b46c1 !important;
+        --dataframe-header-color: white !important;
     }
     
     /* Metrics - Larger */
@@ -234,6 +240,8 @@ if 'results' not in st.session_state:
     st.session_state.results = None
 if 'prob' not in st.session_state:
     st.session_state.prob = None
+if 'num_scenarios' not in st.session_state:
+    st.session_state.num_scenarios = 5  # Default value
 
 
 # --- 3. SIDEBAR FOR ALL USER INPUTS ---
@@ -266,7 +274,12 @@ with st.sidebar:
         with col2:
             num_days = st.number_input("Planning Days", 1, 90, 14, 1)
         
-        num_scenarios = st.slider("Demand Scenarios", 1, 300, 5, 1)
+        num_scenarios = st.number_input(
+            "Demand Scenarios", 
+            1, 300, 
+            st.session_state.get('num_scenarios', 5), 
+            1
+        )
         
         if st.button("🎲 Generate Sample Data", type="secondary", use_container_width=True):
             nurses_list, scenarios_df = m.generate_sample_data(num_nurses, num_days, num_scenarios)
@@ -876,17 +889,34 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
     # Enhanced progress indicator
     progress_placeholder = st.empty()
     with progress_placeholder.container():
-        st.markdown("""
-        <div style="text-align: center; padding: 3rem 2rem; background: #667eea; 
-                    border-radius: 16px; color: white; margin: 2rem 0;">
-            <div style="font-size: 3rem; margin-bottom: 1rem;">⚡</div>
-            <h1 style="margin: 0; color: white; font-size: 2.5rem;">Optimizing...</h1>
-            <p style="margin: 1.5rem 0 0 0; font-size: 1.3rem; opacity: 0.9;">
-                Building model and finding optimal solution
-            </p>
+        # --- Robust GIF display ---
+        import base64
+        import os
+        
+        gif_html = ""
+        try:
+            # Read the GIF file and encode it in base64
+            with open("loading.gif", "rb") as f:
+                gif_bytes = f.read()
+            gif_base64 = base64.b64encode(gif_bytes).decode("utf-8")
+            gif_html = f'<img src="data:image/gif;base64,{gif_base64}" alt="loading" width="150">'
+        except Exception:
+            # Fallback emoji if GIF is not found
+            gif_html = '<div style="font-size: 5rem;">⚡</div>'
+
+        # Combine everything into a single HTML block for correct rendering
+        st.markdown(f"""
+        <div style="background: #667eea; border-radius: 16px; padding: 2rem; margin: 2rem 0; display: flex; align-items: center;">
+            <div style="flex: 1; text-align: center; padding-right: 1rem;">
+                {gif_html}
+            </div>
+            <div style="flex: 2; text-align: left;">
+                <h1 style="color: white; font-size: 2.5rem; margin: 0;">Optimizing...</h1>
+                <p style="color: white; font-size: 1.3rem; opacity: 0.9; margin-top: 0.5rem;">Building model and finding optimal solution</p>
+            </div>
         </div>
         """, unsafe_allow_html=True)
-    
+
     # ============================================================================
     # SOLVE MODEL WITH COMPREHENSIVE ERROR HANDLING
     # ============================================================================
@@ -1315,18 +1345,82 @@ if st.session_state.results is not None:
         col1, col2 = st.columns([3, 1])
         with col2:
             show_summary = st.checkbox("Show Summary Columns", value=True)
+
+        # --- Advanced Weekend Highlighting ---
+        styler = roster_df.style
+        start_date_str = model_params.get('start_date')
+        weekend_cols = []
+        complete_weekends = [] # List of (saturday_col, sunday_col) tuples
+
+        if start_date_str:
+            try:
+                from datetime import datetime, timedelta
+                start_date = datetime.strptime(start_date_str, '%Y-%m-%d')
+                
+                day_cols = [col for col in roster_df.columns if col.startswith("D") and col[1:].isdigit()]
+                day_nums_sorted = sorted([int(col[1:]) for col in day_cols])
+
+                # 1. Identify all weekend columns (for general column highlight)
+                for day_num in day_nums_sorted:
+                    current_date = start_date + timedelta(days=day_num - 1)
+                    # 5 = Saturday, 6 = Sunday
+                    if current_date.weekday() >= 5:
+                        weekend_cols.append(f"D{day_num}")
+
+                # 2. Identify complete weekend pairs (for specific cell highlight)
+                for i in range(len(day_nums_sorted) - 1):
+                    day1_num, day2_num = day_nums_sorted[i], day_nums_sorted[i+1]
+                    date1 = start_date + timedelta(days=day1_num - 1)
+                    date2 = start_date + timedelta(days=day2_num - 1)
+                    if date1.weekday() == 5 and date2.weekday() == 6 and (day2_num - day1_num == 1):
+                        complete_weekends.append((f"D{day1_num}", f"D{day2_num}"))
+
+                # 3. Apply a light purple background to all weekend columns
+                if weekend_cols:
+                    styler = styler.set_properties(
+                        subset=weekend_cols, 
+                        **{'background-color': '#f5f3ff', 'font-weight': 'bold'}
+                    )
+
+                # 4. Define a function to apply cell-specific yellow highlight for OFF weekends
+                def highlight_off_weekends(row):
+                    # Default style is empty
+                    styles = pd.Series('', index=row.index)
+                    for sat_col, sun_col in complete_weekends:
+                        if sat_col in row.index and sun_col in row.index:
+                            if row[sat_col] == 'OFF' and row[sun_col] == 'OFF':
+                                styles[sat_col] = 'background-color: #fff8c4' # Light yellow
+                                styles[sun_col] = 'background-color: #fff8c4' # Light yellow
+                    return styles
+
+                # 5. Apply the cell-specific highlighting
+                if complete_weekends:
+                    styler = styler.apply(highlight_off_weekends, axis=1)
+
+            except Exception as e:
+                st.warning(f"Could not highlight weekends: {e}")
         
         if show_summary:
             st.dataframe(
-                roster_df,
+                styler,
                 use_container_width=True,
                 height=400
             )
         else:
             # Hide summary columns - show only day columns (D1, D2, D3, etc.)
             day_cols = [col for col in roster_df.columns if col.startswith("D") and col[1:].isdigit()]
+            # When hiding columns, we need to re-apply the styles to the subsetted dataframe
+            display_df = roster_df[["Nurse"] + day_cols].copy()
+            styler = display_df.style
+            if weekend_cols:
+                 styler = styler.set_properties(
+                    subset=[c for c in weekend_cols if c in display_df.columns], 
+                    **{'background-color': '#f5f3ff', 'font-weight': 'bold'})
+            if complete_weekends:
+                styler = styler.apply(highlight_off_weekends, axis=1)
+
             st.dataframe(
-                roster_df[["Nurse"] + day_cols],
+                styler,
                 use_container_width=True,
                 height=400
             )
@@ -1410,10 +1504,35 @@ if st.session_state.results is not None:
             labels=dict(x="Day", y="Nurse", color="Shift Type"),
             x=day_cols,
             y=heatmap_data.index,
-            color_continuous_scale="RdYlGn_r",
+            color_continuous_scale="Viridis",
             aspect="auto",
             title="Nurse Schedule - Color-Coded Heatmap"
         )
+
+        # --- Add highlighting to heatmap for OFF weekends ---
+        if start_date_str and complete_weekends:
+            heatmap_x_axis = day_cols
+            heatmap_y_axis = list(heatmap_data.index)
+
+            for nurse_idx, nurse_name in enumerate(heatmap_y_axis):
+                nurse_row = roster_df[roster_df['Nurse'] == nurse_name].iloc[0]
+                for sat_col, sun_col in complete_weekends:
+                    if sat_col in nurse_row and sun_col in nurse_row:
+                        if nurse_row[sat_col] == 'OFF' and nurse_row[sun_col] == 'OFF':
+                            try:
+                                sat_x_idx = heatmap_x_axis.index(sat_col)
+                                fig_heatmap.add_shape(
+                                    type="rect",
+                                    xref="x", yref="y",
+                                    x0=sat_x_idx - 0.5, y0=nurse_idx - 0.5,
+                                    x1=sat_x_idx + 1.5, y1=nurse_idx + 0.5, # Span 2 days
+                                    line=dict(color="gold", width=3),
+                                    fillcolor="yellow",
+                                    opacity=0.3,
+                                    layer="above"
+                                )
+                            except (ValueError, IndexError):
+                                pass # Day not in heatmap axis
         
         # Update hover template to show descriptive shift names
         fig_heatmap.update_traces(
@@ -1436,7 +1555,15 @@ if st.session_state.results is not None:
             height=max(400, len(nurses_list or []) * 20),
             font=dict(size=12),
             title_font_size=16,
-            plot_bgcolor='black'  # Set background to black to create grid effect
+            plot_bgcolor='white',
+            paper_bgcolor='white',
+            coloraxis=dict(
+                colorbar=dict(
+                    title="Shift",
+                    thickness=15,
+                    len=0.7
+                )
+            )
         )
         st.plotly_chart(fig_heatmap, use_container_width=True)
         
