@@ -1493,21 +1493,80 @@ if st.session_state.results is not None:
         # Create descriptive heatmap data for display
         heatmap_display = heatmap_data.replace(shift_names)
         
-        # Convert shift labels to numeric for color mapping
-        shift_map = {'OFF': 0, 'E': 1, 'D': 2, 'L': 3, 'N': 4, 
-                     'E (OT)': 1.5, 'D (OT)': 2.5, 'L (OT)': 3.5, 'N (OT)': 4.5}
-        
-        heatmap_numeric = heatmap_data.replace(shift_map)
-        
-        fig_heatmap = px.imshow(
-            heatmap_numeric,
-            labels=dict(x="Day", y="Nurse", color="Shift Type"),
-            x=day_cols,
-            y=heatmap_data.index,
-            color_continuous_scale="Viridis",
-            aspect="auto",
-            title="Nurse Schedule - Color-Coded Heatmap"
+        # Let user choose color mode: discrete (categorical shifts) or perceptual sequential
+        color_mode = st.radio(
+            "Heatmap color mode",
+            options=["Discrete (categorical shifts)", "Perceptual (Viridis)"],
+            index=0,
+            horizontal=True
         )
+
+        # Discrete mapping: map every distinct shift label to an integer code
+        shift_categories = [
+            'Off Day', 'Early Shift', 'Early (OT)', 'Day Shift', 'Day (OT)',
+            'Late Shift', 'Late (OT)', 'Night Shift', 'Night (OT)'
+        ]
+        # Map original raw labels to display names (must match heatmap_display mapping above)
+        raw_to_display = {
+            'OFF': 'Off Day', 'E': 'Early Shift', 'E (OT)': 'Early (OT)',
+            'D': 'Day Shift', 'D (OT)': 'Day (OT)', 'L': 'Late Shift',
+            'L (OT)': 'Late (OT)', 'N': 'Night Shift', 'N (OT)': 'Night (OT)'
+        }
+
+        # Build numeric matrix according to selected mode
+        if color_mode == "Perceptual (Viridis)":
+            # Backwards-compatible mapping to numeric continuum (keeps earlier behavior)
+            shift_map = {'OFF': 0, 'E': 1, 'D': 2, 'L': 3, 'N': 4,
+                         'E (OT)': 1.5, 'D (OT)': 2.5, 'L (OT)': 3.5, 'N (OT)': 4.5}
+            heatmap_numeric = heatmap_data.replace(shift_map)
+
+            fig_heatmap = px.imshow(
+                heatmap_numeric,
+                labels=dict(x="Day", y="Nurse", color="Shift Type"),
+                x=day_cols,
+                y=heatmap_data.index,
+                color_continuous_scale="Viridis",
+                aspect="auto",
+                title="Nurse Schedule - Color-Coded Heatmap"
+            )
+        else:
+            # Discrete categorical mode: assign integer codes 0..N-1
+            cat_map = {raw: idx for idx, raw in enumerate(['OFF', 'E', 'E (OT)', 'D', 'D (OT)', 'L', 'L (OT)', 'N', 'N (OT)'])}
+            heatmap_numeric = heatmap_data.replace(cat_map)
+
+            # Define a color for each category (high-contrast, perceptually-ordered)
+            category_colors = [
+                '#f7f7f7',  # Off Day (light gray)
+                '#2b83ba',  # Early
+                '#1f4b6b',  # Early (OT)
+                '#66c2a5',  # Day
+                '#2a9d8f',  # Day (OT)
+                '#fdae61',  # Late
+                '#e07b39',  # Late (OT)
+                '#d7191c',  # Night
+                '#a50f15',  # Night (OT)
+            ]
+
+            # Build a stepped colorscale so each integer maps to a solid color block
+            n = len(category_colors)
+            stepped_colorscale = []
+            for i, col in enumerate(category_colors):
+                start = i / n
+                end = (i + 1) / n
+                stepped_colorscale.append([start, col])
+                stepped_colorscale.append([end, col])
+
+            fig_heatmap = px.imshow(
+                heatmap_numeric,
+                labels=dict(x="Day", y="Nurse", color="Shift Type"),
+                x=day_cols,
+                y=heatmap_data.index,
+                color_continuous_scale=stepped_colorscale,
+                zmin=-0.5,
+                zmax=n - 0.5,
+                aspect="auto",
+                title="Nurse Schedule - Color-Coded Heatmap (Discrete)"
+            )
 
         # --- Add highlighting to heatmap for OFF weekends ---
         if start_date_str and complete_weekends:
@@ -1542,14 +1601,27 @@ if st.session_state.results is not None:
             ygap=1   # Add vertical gap between cells
         )
         
-        # Update colorbar to show shift type labels instead of numbers
-        fig_heatmap.update_coloraxes(
-            colorbar=dict(
-                tickmode='array',
-                tickvals=[0, 1, 2, 3, 4],
-                ticktext=['Off Day', 'Early', 'Day', 'Late', 'Night']
+        # Update colorbar ticks/labels depending on chosen mode
+        if color_mode == "Perceptual (Viridis)":
+            fig_heatmap.update_coloraxes(
+                colorbar=dict(
+                    tickmode='array',
+                    tickvals=[0, 1, 2, 3, 4],
+                    ticktext=['Off Day', 'Early', 'Day', 'Late', 'Night']
+                )
             )
-        )
+        else:
+            # Discrete mode: show all category ticks
+            fig_heatmap.update_coloraxes(
+                colorbar=dict(
+                    tickmode='array',
+                    tickvals=list(range(len(category_colors))),
+                    ticktext=[
+                        'Off Day', 'Early', 'Early (OT)', 'Day', 'Day (OT)',
+                        'Late', 'Late (OT)', 'Night', 'Night (OT)'
+                    ]
+                )
+            )
         
         fig_heatmap.update_layout(
             height=max(400, len(nurses_list or []) * 20),
