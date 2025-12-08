@@ -491,6 +491,15 @@ with st.sidebar:
     st.header("💰 Cost Parameters")
     
     with st.expander("💵 Wage Costs", expanded=True):
+        st.markdown("""
+        **Cost hierarchy determines when each type is used:**
+        - Stage 1: Regular ($c_1$) and Overtime ($c_2$) planned in advance
+        - Stage 2: Emergency ($q^+$) used when actual demand exceeds plan
+        
+        💡 **Overtime vs Emergency:** 
+        - Overtime is cheaper but limited by $n_3$ (min regular shifts)
+        - If overtime capacity is too low, emergency staff will be used instead
+        """)
         c1 = st.number_input("Regular Shift Cost ($c_1$)", 0.0, 10000.0, 100.0, 1.0)
         c2 = st.number_input("Overtime Shift Cost ($c_2$)", 0.0, 10000.0, 150.0, 1.0)
         q_plus = st.number_input("Emergency Shift Cost ($q^+$)", 0.0, 10000.0, 200.0, 1.0)
@@ -542,7 +551,26 @@ with st.sidebar:
     with st.expander("⚖️ Basic Shift Constraints", expanded=True):
         n1 = st.slider("Max Total Shifts ($n_1$)", 1, 30, 15, 1)
         n2 = st.slider("Max Night Shifts ($n_2$)", 1, 15, 5, 1)
-        n3 = st.slider("Min Regular Shifts ($n_3$)", 0, 20, 10, 1)
+        n3 = st.slider("Min Regular Shifts ($n_3$)", 0, 20, 5, 1)
+        
+        # NEW: Overtime enforcement option
+        enforce_max_regular = st.checkbox(
+            "⭐ Enforce Max Regular Shifts (Force Overtime)",
+            value=False,
+            help="If enabled, caps regular shifts at n3, forcing shifts beyond n3 to be overtime. "
+                 "Without this, the model treats all Stage 1 shifts as 'regular' (cheaper)."
+        )
+        
+        # Show overtime capacity info
+        overtime_capacity = n1 - n3
+        if enforce_max_regular:
+            st.success(f"✅ Overtime enforced: Each nurse does ≤{n3} regular shifts, then {overtime_capacity} overtime shifts available")
+        elif overtime_capacity <= 2:
+            st.warning(f"⚠️ Low overtime capacity: Only {overtime_capacity} overtime slots available per nurse. "
+                      f"Enable 'Force Overtime' above or reduce $n_3$ to see overtime usage.")
+        else:
+            st.info(f"ℹ️ Overtime capacity: Up to {overtime_capacity} overtime shifts per nurse (= $n_1$ - $n_3$). "
+                   f"Enable 'Force Overtime' above to activate.")
     
     # NEW: Advanced constraints for university project
     with st.expander("🏖️ Weekend Constraints (Advanced)", expanded=False):
@@ -779,6 +807,9 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
         'c1': c1, 'c2': c2, 'q_plus': q_plus, 'q_minus': q_minus,
         'c3': c3, 'c4': c4,  # Soft constraint penalties
         'n1': n1, 'n2': n2, 'n3': n3,
+        
+        # Overtime enforcement
+        'enforce_max_regular': enforce_max_regular,
         
         # Advanced constraints (NEW for university project)
         'n4': n4,
@@ -1352,6 +1383,17 @@ if st.session_state.results is not None:
         weekend_cols = []
         complete_weekends = [] # List of (saturday_col, sunday_col) tuples
 
+        # Define the highlighting function early so it's always available
+        def highlight_off_weekends(row):
+            # Default style is empty
+            styles = pd.Series('', index=row.index)
+            for sat_col, sun_col in complete_weekends:
+                if sat_col in row.index and sun_col in row.index:
+                    if row[sat_col] == 'OFF' and row[sun_col] == 'OFF':
+                        styles[sat_col] = 'background-color: #fff8c4' # Light yellow
+                        styles[sun_col] = 'background-color: #fff8c4' # Light yellow
+            return styles
+
         if start_date_str:
             try:
                 from datetime import datetime, timedelta
@@ -1382,18 +1424,7 @@ if st.session_state.results is not None:
                         **{'background-color': '#f5f3ff', 'font-weight': 'bold'}
                     )
 
-                # 4. Define a function to apply cell-specific yellow highlight for OFF weekends
-                def highlight_off_weekends(row):
-                    # Default style is empty
-                    styles = pd.Series('', index=row.index)
-                    for sat_col, sun_col in complete_weekends:
-                        if sat_col in row.index and sun_col in row.index:
-                            if row[sat_col] == 'OFF' and row[sun_col] == 'OFF':
-                                styles[sat_col] = 'background-color: #fff8c4' # Light yellow
-                                styles[sun_col] = 'background-color: #fff8c4' # Light yellow
-                    return styles
-
-                # 5. Apply the cell-specific highlighting
+                # 4. Apply the cell-specific highlighting
                 if complete_weekends:
                     styler = styler.apply(highlight_off_weekends, axis=1)
 
@@ -1513,6 +1544,19 @@ if st.session_state.results is not None:
             'L (OT)': 'Late (OT)', 'N': 'Night Shift', 'N (OT)': 'Night (OT)'
         }
 
+        # Initialize category_colors for discrete mode (used in colorbar later)
+        category_colors = [
+            '#ffffff',  # 0: Off Day (white - stands out clearly)
+            '#87CEEB',  # 1: Early (sky blue - morning)
+            '#4682B4',  # 2: Early (OT) (steel blue - darker morning)
+            '#FFD700',  # 3: Day (gold - bright daytime)
+            '#FFA500',  # 4: Day (OT) (orange - darker day)
+            '#FF8C00',  # 5: Late (dark orange - evening)
+            '#FF6347',  # 6: Late (OT) (tomato - darker evening)
+            '#8B008B',  # 7: Night (dark magenta - nighttime)
+            '#4B0082',  # 8: Night (OT) (indigo - darker night)
+        ]
+
         # Build numeric matrix according to selected mode
         if color_mode == "Perceptual (Viridis)":
             # Backwards-compatible mapping to numeric continuum (keeps earlier behavior)
@@ -1533,19 +1577,6 @@ if st.session_state.results is not None:
             # Discrete categorical mode: assign integer codes 0..N-1
             cat_map = {raw: idx for idx, raw in enumerate(['OFF', 'E', 'E (OT)', 'D', 'D (OT)', 'L', 'L (OT)', 'N', 'N (OT)'])}
             heatmap_numeric = heatmap_data.replace(cat_map)
-
-            # Define a color for each category (high-contrast, perceptually-ordered)
-            category_colors = [
-                '#f7f7f7',  # Off Day (light gray)
-                '#2b83ba',  # Early
-                '#1f4b6b',  # Early (OT)
-                '#66c2a5',  # Day
-                '#2a9d8f',  # Day (OT)
-                '#fdae61',  # Late
-                '#e07b39',  # Late (OT)
-                '#d7191c',  # Night
-                '#a50f15',  # Night (OT)
-            ]
 
             # Build a stepped colorscale so each integer maps to a solid color block
             n = len(category_colors)
@@ -1660,6 +1691,53 @@ if st.session_state.results is not None:
         st.header("💵 Detailed Cost Breakdown")
         
         cost = results['cost_breakdown']
+        
+        # Add overtime vs emergency usage insight box
+        total_overtime = cost['total_overtime_shifts']
+        total_emergency = sum(results['scenario_df']['shortage_shifts'])
+        
+        if total_emergency > 0 and total_overtime == 0:
+            num_nurses = len(results.get('roster_df', []))
+            baseline_demand = cost.get('total_regular_shifts', 0)
+            max_regular = num_nurses * model_params.get('n1', 15)
+            
+            if baseline_demand < max_regular * 0.8:
+                st.info(f"""
+                ℹ️ **No overtime needed - regular shifts sufficient**
+                
+                Baseline demand ({baseline_demand:.0f} shifts) is low enough to be covered by regular shifts alone.
+                Emergency staff ({total_emergency:.0f} shifts) handles excess demand in high-demand scenarios.
+                
+                **Why no overtime?** Overtime ($150) is more expensive than regular ($100), so the model only uses 
+                it when forced by capacity constraints.
+                
+                **To see overtime in action:** Increase baseline demand or reduce available nurses.
+                """)
+            else:
+                st.warning(f"""
+                ⚠️ **No overtime used, all extra demand handled by emergency staff!**
+                
+                Your current settings forced the model to use expensive emergency staff ({total_emergency:.0f} shifts) 
+                instead of planned overtime.
+                
+                **Why?** Constraint $n_3$ (min regular shifts) = {model_params.get('n3', 'N/A')} may be limiting 
+                overtime flexibility.
+                
+                **To enable overtime:** Try reducing $n_3$ or increasing baseline demand.
+                """)
+        elif total_overtime > 0 and total_emergency > 0:
+            overtime_pct = total_overtime / (total_overtime + total_emergency) * 100
+            st.info(f"""
+            ℹ️ **Mix of overtime and emergency staff used**
+            - Planned overtime: {total_overtime:.0f} shifts ({overtime_pct:.1f}%)
+            - Emergency staff: {total_emergency:.0f} shifts ({100-overtime_pct:.1f}%)
+            """)
+        elif total_overtime > 0:
+            st.success(f"""
+            ✅ **Overtime effectively utilized!**
+            - Planned overtime: {total_overtime:.0f} shifts
+            - No emergency staff needed
+            """)
         
         col1, col2 = st.columns(2)
         

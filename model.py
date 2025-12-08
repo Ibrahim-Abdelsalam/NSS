@@ -30,28 +30,61 @@ def validate_capacity_feasibility(nurses_list: List[str], scenarios_df: pd.DataF
             'shortage_shifts': 0
         }
 
-    # baseline scenario = smallest scenario id
+    # baseline scenario = smallest scenario id (for reference only - not a hard constraint!)
     baseline_scenario = min(scenarios_df['scenario'].unique())
     baseline_demand = int(scenarios_df[scenarios_df['scenario'] == baseline_scenario]['demand'].sum())
 
-    # peak daily demand across all scenarios
+    # peak daily demand across all scenarios (for reporting only)
     daily_demands = scenarios_df.groupby(['scenario', 'day'])['demand'].sum()
     peak_daily_demand = int(daily_demands.max())
 
+    # ============================================================================
+    # FEASIBILITY VALIDATION (Updated December 7, 2025)
+    # ============================================================================
+    # IMPORTANT: In two-stage stochastic programming with recourse (Constraint 16):
+    #   Σᵢ(sr+so) + α - β ≥ R^ω
+    #
+    # The model can ALWAYS meet demand via emergency staff (α), which has no upper 
+    # bound by default. Therefore:
+    #   - NO validation needed for peak_daily_demand > num_nurses ✓
+    #   - NO validation needed for baseline_demand > total_capacity ✓
+    #   - The model is designed to handle demand spikes via emergency staff
+    #
+    # ONLY validate if max_emergency_staff is set (hard operational limit)
+    # ============================================================================
+    
     is_feasible = True
     issues = []
-
-    if baseline_demand > total_capacity:
-        is_feasible = False
-        issues.append(f"❌ Baseline demand ({baseline_demand} shifts) exceeds total nurse capacity ({total_capacity} shifts)")
-        issues.append(f"   → Shortage: {baseline_demand - total_capacity} shifts")
-
-    if peak_daily_demand > num_nurses:
-        is_feasible = False
-        issues.append(f"❌ Peak daily demand ({peak_daily_demand} nurses) exceeds available nurses ({num_nurses})")
-        issues.append("   → Some days require more nurses than available")
-
+    warnings = []
+    
+    # Check if max_emergency_staff constraint would make problem infeasible
+    max_emergency = model_params.get('max_emergency_staff', float('inf'))
+    
+    if max_emergency < float('inf'):
+        # If emergency staff is capped, check if demand can be met
+        for w in scenarios_df['scenario'].unique():
+            scenario_data = scenarios_df[scenarios_df['scenario'] == w]
+            for (day, shift), group in scenario_data.groupby(['day', 'shift']):
+                demand = int(group['demand'].sum())
+                # Max possible coverage = all nurses + max emergency
+                max_possible = num_nurses + max_emergency
+                if demand > max_possible:
+                    is_feasible = False
+                    issues.append(f"❌ Scenario {w}, Day {day}, Shift {shift}: Demand ({demand}) exceeds max possible coverage ({max_possible})")
+                    issues.append(f"   → Even with all {num_nurses} nurses + {max_emergency} emergency staff = {max_possible} < {demand}")
+    
+    # Generate warnings (not errors) for high utilization
     utilization = (baseline_demand / total_capacity) * 100 if total_capacity > 0 else 0
+    
+    if baseline_demand > total_capacity:
+        warnings.append(f"⚠️  Baseline demand ({baseline_demand}) > total capacity ({total_capacity})")
+        warnings.append(f"   → Will rely heavily on emergency staff (costly!)")
+        warnings.append(f"   → Consider: more nurses OR higher n1")
+    
+    if peak_daily_demand > num_nurses:
+        warnings.append(f"⚠️  Peak daily demand ({peak_daily_demand} nurses/day) > available nurses ({num_nurses})")
+        warnings.append(f"   → Some days will require emergency staff")
+        warnings.append(f"   → This is expected - model handles it via recourse (α)")
 
     details = {
         'num_nurses': num_nurses,
@@ -60,10 +93,24 @@ def validate_capacity_feasibility(nurses_list: List[str], scenarios_df: pd.DataF
         'baseline_demand': baseline_demand,
         'peak_daily_demand': peak_daily_demand,
         'utilization_percent': utilization,
-        'shortage_shifts': max(0, baseline_demand - total_capacity)
+        'shortage_shifts': max(0, baseline_demand - total_capacity),
+        'warnings': warnings  # Add warnings to details
     }
 
-    message = "\n".join(issues) if issues else "✅ Problem is practically feasible"
+    # Build message: errors first, then warnings
+    message_parts = []
+    if issues:
+        message_parts.extend(issues)
+    if warnings:
+        message_parts.append("")  # Empty line separator
+        message_parts.extend(warnings)
+    
+    if not issues and not warnings:
+        message = "✅ Problem is feasible with good capacity utilization"
+    elif issues:
+        message = "\n".join(message_parts)
+    else:
+        message = "✅ Problem is feasible\n" + "\n".join(message_parts)
 
     return is_feasible, message, details
 
@@ -237,24 +284,30 @@ def build_and_solve_model(
     )
 
     if not is_feasible:
-        error_msg = f"""🚨 PRACTICAL INFEASIBILITY DETECTED
+        error_msg = f"""🚨 HARD INFEASIBILITY DETECTED
 
 {feasibility_msg}
 
 📊 Problem Details:
-   \n• Nurses: {feasibility_details['num_nurses']}
-   \n• Max shifts per nurse: {feasibility_details['max_shifts_per_nurse']}
-   \n• Total capacity: {feasibility_details['total_capacity']} shifts
-   \n• Baseline demand: {feasibility_details['baseline_demand']} shifts
-   \n• Utilization: {feasibility_details['utilization_percent']:.1f}%
+   • Nurses: {feasibility_details['num_nurses']}
+   • Max shifts per nurse (n1): {feasibility_details['max_shifts_per_nurse']}
+   • Total capacity: {feasibility_details['total_capacity']} shifts
+   • Max emergency staff per shift: {model_params.get('max_emergency_staff', '∞')}
 
-💡 Suggested Solutions:
-   \n• Increase number of nurses
-   \n• Increase maximum shifts per nurse (n1)
-   \n• Reduce baseline demand requirements
-   \n• Use emergency staff pool for excess demand
+💡 This error means demand CANNOT be met even with emergency staff!
+
+Suggested Solutions:
+   1. Increase max_emergency_staff limit (or remove it for unlimited emergency pool)
+   2. Add more nurses to the pool
+   3. Increase n1 (max shifts per nurse)
+   4. Reduce peak demand in scenarios
 """
         raise ValueError(error_msg)
+    
+    # Print warnings if any (not errors, just helpful info)
+    if feasibility_details.get('warnings'):
+        import warnings as warn_module
+        warn_module.warn("\n" + "\n".join(feasibility_details['warnings']), UserWarning)
     
     # Define unwanted shift patterns (K' in the paper)
     # These are consecutive shift combinations to avoid
@@ -559,20 +612,30 @@ def build_and_solve_model(
                 )
 
     # ============================================================================
-    # CONSTRAINT 5: BASELINE COVERAGE REQUIREMENT (FROM PAPER)
-    # Mathematical: Σ_i (sr_ijk + so_ijk) ≥ R_jk  ∀ j,k  (using baseline scenario)
-    # Use the first (minimum) scenario as baseline demand
-    # This ensures first-stage assignments meet baseline demand
+    # CONSTRAINT 5: BASELINE COVERAGE (REMOVED - WAS INCORRECT!)
     # ============================================================================
-    baseline_scenario = min(W_scenarios)
-    for j in J_days:
-        for k in K_shifts:
-            baseline_val = R_demand.get((j, k, baseline_scenario), 0)
-            if baseline_val > 0:
-                prob += (
-                    pulp.lpSum(sr[i][j][k] + so[i][j][k] for i in I_nurses) >= baseline_val,
-                    f"BaselineCoverage_{j}_{k}"
-                )
+    # NOTE: The paper does NOT enforce baseline coverage as a hard constraint!
+    # 
+    # PREVIOUS IMPLEMENTATION (WRONG):
+    #   Forced: Σ_i (sr_ijk + so_ijk) ≥ R_jk (baseline demand)
+    #   This prevented the model from using overtime effectively
+    #   
+    # WHY THIS WAS WRONG:
+    #   1. The paper's Table 3 shows "baseline demand" as a REFERENCE, not a constraint
+    #   2. The paper only has Constraint 16: Σᵢ(sr+so) + α - β ≥ R_{jk}^ω (per scenario)
+    #   3. By forcing baseline coverage with sr+so, we eliminated the need for overtime
+    #   4. Model would schedule just enough regular+overtime to meet baseline, then use
+    #      emergency staff (α) for any excess demand in other scenarios
+    #
+    # CORRECT IMPLEMENTATION:
+    #   - NO baseline coverage constraint in Stage 1
+    #   - Let the model freely choose how many sr/so shifts to schedule
+    #   - Constraint 16 ensures all scenarios are covered via α (emergency staff)
+    #   - The model will naturally prefer: regular < overtime < emergency (by cost)
+    #   - This allows overtime to be used when it's cheaper than emergency staff
+    #
+    # The baseline scenario is now just used for reference/validation, not constraints.
+    # ============================================================================
 
     # ============================================================================
     # CONSTRAINT 6: Maximum Total Shifts per Nurse
@@ -601,17 +664,38 @@ def build_and_solve_model(
             )
 
     # ============================================================================
-    # CONSTRAINT 8: Minimum Regular Shifts per Nurse
+    # CONSTRAINT 8: Minimum Regular Shifts per Nurse (IF WORKING)
     # ============================================================================
-    # Mathematical: Σⱼₖ sr_{ijk} ≥ n₃  ∀i ∈ I
-    # Meaning: Each nurse works at least n₃ regular (non-overtime) shifts
-    # Purpose: Ensures fair work distribution and job security
+    # Mathematical: Σⱼₖ sr_{ijk} ≥ n₃ · SR_i  ∀i ∈ I
+    # Meaning: IF a nurse works any shifts (SR_i=1), THEN they must work ≥ n₃ regular shifts
+    #          If a nurse doesn't work (SR_i=0), this constraint is 0 ≥ 0 (satisfied)
+    # Purpose: Ensures fair work distribution and job security for WORKING nurses only
     # ============================================================================
     for i in I_nurses:
         prob += (
-            pulp.lpSum(sr[i][j][k] for j in J_days for k in K_shifts) >= n3,
+            pulp.lpSum(sr[i][j][k] for j in J_days for k in K_shifts) >= n3 * SR[i],
             f"MinRegularShifts_{i}"
         )
+    
+    # ============================================================================
+    # CONSTRAINT 8b: Maximum Regular Shifts per Nurse (IF WORKING) - OPTIONAL
+    # ============================================================================
+    # Mathematical: Σⱼₖ sr_{ijk} ≤ n₃ · SR_i  ∀i ∈ I
+    # Meaning: IF a nurse works (SR_i=1), they can do AT MOST n₃ regular shifts
+    #          Any shifts beyond n₃ must be overtime (so_{ijk})
+    # Purpose: Forces the model to use overtime for shifts beyond the minimum n₃
+    # Note: This constraint is NOT explicitly in He et al. (2019) paper, but aligns
+    #       with the practical interpretation that "first n₃ shifts are regular,
+    #       shifts beyond n₃ are overtime" as documented in the parameters.
+    # Enable: Set model_params['enforce_max_regular'] = True
+    # ============================================================================
+    enforce_max_regular = model_params.get('enforce_max_regular', False)
+    if enforce_max_regular:
+        for i in I_nurses:
+            prob += (
+                pulp.lpSum(sr[i][j][k] for j in J_days for k in K_shifts) <= n3 * SR[i],
+                f"MaxRegularShifts_{i}"
+            )
         
     # ============================================================================
     # CONSTRAINT 9: Minimum Complete Weekends Off (ADVANCED)

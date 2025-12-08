@@ -57,96 +57,40 @@ numpy==2.1.3           # Numerical computations
 
 ## 🏗️ Code Architecture
 
-The system has **4 main Python files**:
+The system has **3 main Python files**:
 
-### 1. `model_oop.py` (Deprecated / Removed)
-
-The original object-oriented implementation `model_oop.py` has been deprecated and
-removed from active use. The project now uses the functional API in `model.py`.
-Notebooks and documentation that reference `model_oop.py` should be updated to
-import from `model` (for example, use `from model import build_and_solve_model`).
-**Purpose:** Object-oriented optimization engine - clean, maintainable interface
-
-**Key Classes:**
-```python
-class ModelParameters:
-    """Encapsulates all model parameters with validation"""
-    c1, c2, q_plus, q_minus  # Cost parameters
-    n1, n2, n3, n4           # Work rules
-    sigma, mu                # CVaR parameters
-    
-    def validate(self):
-        """Ensures all parameters are valid"""
-
-class NurseSchedulingModel:
-    """Main optimization model"""
-    def __init__(self, nurses, scenarios, params):
-        """Initialize with data and parameters"""
-    
-    def build(self, model_type="SDM"):
-        """Build the optimization model (variables + constraints)"""
-    
-    def solve(self, solver='highs'):
-        """Solve the model and return status"""
-    
-    def get_results(self):
-        """Extract solution into OptimizationResults object"""
-
-class OptimizationResults:
-    """Encapsulates solution data with convenient accessors"""
-    @property
-    def total_cost(self): ...
-    
-    @property
-    def schedule(self): ...
-```
-
-**Usage:**
-```python
-# Create parameters
-params = ModelParameters(c1=100, c2=150, q_plus=200, n1=24, n2=3, n3=16)
-
-# Create and solve model
-model = NurseSchedulingModel(nurses_list, scenarios_df, params)
-model.build(model_type="SDM")
-status = model.solve(solver='highs')
-
-# Get results
-if status == "Optimal":
-    results = model.get_results()
-    print(f"Total cost: ${results.total_cost:.2f}")
-    schedule_df = results.schedule
-```
-
-### 2. `model.py` (1,648 lines) - Legacy Functional Version
-**Purpose:** Original functional implementation (kept for backward compatibility)
+### 1. `model.py` (~1,833 lines) - Optimization Engine
+**Purpose:** Core optimization model using functional programming approach
 
 **Key Functions:**
 ```python
 def build_and_solve_model(nurses_list, scenarios_df, model_params, 
-                          model_type="SDM", solver_name="highs"):
+                          model_type="SDM", solver_name="AUTO"):
     """
-    Builds and solves the model using functional approach.
-    Returns: (prob, status)
+    Builds and solves the optimization model.
+    
+    Args:
+        nurses_list: List of nurse names
+        scenarios_df: Demand scenarios (DataFrame)
+        model_params: Dictionary of parameters (costs, constraints)
+        model_type: "SDM" or "SDM-CVaR"
+        solver_name: "AUTO", "HiGHS", "GUROBI", "CBC"
+    
+    Returns:
+        (prob, status): PuLP problem object and solver status
     """
-```
 
-**Note:** `app.py` no longer depends on `model_oop.py` and uses the functional API in `model.py`.
-
----
-
-### 3. `app.py` (1,813 lines)
-**Purpose:** The optimization engine - builds and solves the mathematical model
-
-**Key Functions:**
-```python
-solve_nurse_scheduling(
-    nurses_list,           # List of nurse names
-    scenarios_df,          # Demand data (DataFrame)
-    model_params,          # Costs, constraints, settings
-    model_type="SDM",      # Model variant (DM, SDM, SDM-CVaR)
-    solver_name="highs"    # Optimization solver
-)
+def extract_results(prob, nurses_list, scenarios_df, model_params, model_type):
+    """
+    Extracts solution from solved model.
+    
+    Returns:
+        Dictionary containing:
+        - roster_df: Nurse schedules
+        - cost_breakdown: Detailed costs
+        - scenario_df: Per-scenario analysis
+        - risk_metrics: CVaR metrics (if applicable)
+    """
 ```
 
 **What it does:**
@@ -155,49 +99,6 @@ solve_nurse_scheduling(
 3. **Defines objective function** (minimize cost)
 4. **Calls solver** (HiGHS, CBC, or Gurobi)
 5. **Extracts solution** (schedule, costs, metrics)
-
-**Structure:**
-- Lines 1-150: Setup and variable creation
-- Lines 151-813: 22 constraints implementation
-- Lines 814-900: Solver configuration
-- Lines 901-1648: Results extraction and formatting
-
-### 3. `app.py` (1,826 lines)
-**Purpose:** Web-based user interface using Streamlit
-
-**Flow:**
-```
-User Input → Parameter Validation → Run Optimization (OOP) → Display Results
-```
-
-**Main Sections:**
-1. **File Upload** (lines 240-390)
-   - Load nurse list and demand scenarios
-   - Validate data format and completeness
-   
-2. **Parameter Settings** (lines 391-670)
-   - Cost parameters (c₁, c₂, q⁺, q⁻)
-   - Work rules (n₁, n₂, n₃, n₄)
-   - Advanced constraints (shift quotas, patterns)
-   - CVaR risk parameters (σ, μ)
-
-3. **Optimization Execution** (lines 671-900) **UPDATED TO USE OOP**
-   ```python
-   # NEW: Object-oriented approach
-   params = ModelParameters(**model_params)
-   model = NurseSchedulingModel(nurses_list, scenarios_df, params)
-   model.build(model_type="SDM")
-   status = model.solve(solver=selected_solver)
-   results = model.get_results()
-   ```
-
-4. **Results Display** (lines 901-1826)
-   - Summary metrics
-   - Cost analysis charts
-   - Coverage visualization
-   - Downloadable schedule
-
----
 
 ### 4. `solver_config.py` (243 lines)
 **Purpose:** Configure different optimization solvers
