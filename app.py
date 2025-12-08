@@ -550,7 +550,7 @@ with st.sidebar:
     
     with st.expander("⚖️ Basic Shift Constraints", expanded=True):
         n1 = st.slider("Max Total Shifts ($n_1$)", 1, 30, 15, 1)
-        n2 = st.slider("Max Night Shifts ($n_2$)", 1, 15, 5, 1)
+        n2 = st.slider("Max Night Shifts ($n_2$)", 0, 15, 5, 1)
         n3 = st.slider("Min Regular Shifts ($n_3$)", 0, 20, 5, 1)
         
         # NEW: Overtime enforcement option
