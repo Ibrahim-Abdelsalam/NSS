@@ -472,15 +472,15 @@ pip install highspy
 **Research Proof-of-Concept** (December 2024-2025)
 
 ### Intended Use
-- ✅ **Academic Research**: Demonstrate advanced optimization techniques (CVaR, fatigue modeling, stochastic programming)
-- ✅ **Educational Tool**: Teaching two-stage stochastic programming and healthcare OR
-- ✅ **Algorithm Validation**: Benchmark solvers, test parameter configurations, experimental studies
-- ✅ **Proof-of-Concept**: Show feasibility of fatigue-aware risk-controlled scheduling
+- **Academic Research**: Demonstrate advanced optimization techniques (CVaR, fatigue modeling, stochastic programming)
+- **Educational Tool**: Teaching two-stage stochastic programming and healthcare OR
+- **Algorithm Validation**: Benchmark solvers, test parameter configurations, experimental studies
+- **Proof-of-Concept**: Show feasibility of fatigue-aware risk-controlled scheduling
 
 ### NOT Intended For
-- ❌ **Production Healthcare Deployment**: Requires extensive validation, regulatory approval, and safety audits
-- ❌ **Real Patient Safety Decisions**: Clinical validation needed before any healthcare use
-- ❌ **Compliance with Healthcare Regulations**: HIPAA, patient safety standards not implemented
+- **Production Healthcare Deployment**: Requires extensive validation, regulatory approval, and safety audits
+- **Real Patient Safety Decisions**: Clinical validation needed before any healthcare use
+- **Compliance with Healthcare Regulations**: HIPAA, patient safety standards not implemented
 
 ### Development Status
 - Core model: 100% complete (22 constraints including fatigue)
