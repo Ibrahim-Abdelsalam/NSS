@@ -1,8 +1,10 @@
-# FROST-NSS: Fatigue-aware Risk Optimization for Stochastic Task allocation
+# FROST-NS: Fatigue-aware Risk Optimization for Stochastic Task allocation in Nurse Scheduling
 
 **Nurse Scheduling System with CVaR Risk Control and Fatigue Modeling**
 
 A research-grade implementation of He et al. (2019) with significant enhancements: configurable overtime logic, piecewise-linear fatigue modeling, and comprehensive parameter tuning experiments.
+
+<div align="center">
 
 [![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -10,6 +12,8 @@ A research-grade implementation of He et al. (2019) with significant enhancement
 [![PuLP](https://img.shields.io/badge/PuLP-2.9.0-green.svg)](https://coin-or.github.io/pulp/)
 [![Gurobi](https://img.shields.io/badge/Gurobi-11.0-red.svg)](https://www.gurobi.com/)
 [![HiGHS](https://img.shields.io/badge/HiGHS-1.7-orange.svg)](https://highs.dev/)
+
+</div>
 
 ## Key Features
 
@@ -465,7 +469,20 @@ pip install highspy
 
 ## Project Status
 
-**Research-Grade Implementation** (December 2024-2025)
+**Research Proof-of-Concept** (December 2024-2025)
+
+### Intended Use
+- ✅ **Academic Research**: Demonstrate advanced optimization techniques (CVaR, fatigue modeling, stochastic programming)
+- ✅ **Educational Tool**: Teaching two-stage stochastic programming and healthcare OR
+- ✅ **Algorithm Validation**: Benchmark solvers, test parameter configurations, experimental studies
+- ✅ **Proof-of-Concept**: Show feasibility of fatigue-aware risk-controlled scheduling
+
+### NOT Intended For
+- ❌ **Production Healthcare Deployment**: Requires extensive validation, regulatory approval, and safety audits
+- ❌ **Real Patient Safety Decisions**: Clinical validation needed before any healthcare use
+- ❌ **Compliance with Healthcare Regulations**: HIPAA, patient safety standards not implemented
+
+### Development Status
 - Core model: 100% complete (22 constraints including fatigue)
 - Validation: 4/4 tests passing
 - Documentation: 10+ comprehensive guides
@@ -473,7 +490,7 @@ pip install highspy
 - Analysis: Overtime paradox identified and resolved
 - Test coverage: Overtime, CVaR, fatigue, emergency staff, soft constraints
 
-**Latest Updates (Dec 2025):**
+### Recent Milestones (Dec 2025)
 - Completed parameter tuning study (2,430 experimental runs)
 - Added configurable overtime logic with UI toggle
 - Enhanced fatigue modeling with SOS2 constraints
@@ -481,6 +498,7 @@ pip install highspy
 - Generated sensitivity analysis and optimal configurations
 - Updated README with experiment results
 - Organized project into clear directory structure
+
 
 ## License
 
