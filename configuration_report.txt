@@ -1,0 +1,197 @@
+COMPREHENSIVE MODEL CONFIGURATION COMPARISON REPORT
+================================================================================
+Generated: 2025-12-25 23:10:33
+Data: 8 nurses, 7 days, 3 scenarios
+
+
+================================================================================
+8. Lower Costs (C1=80, C2=120, Q+=180)
+================================================================================
+Status: Optimal
+Solve Time: 0.56s
+
+Costs:
+  Total Cost: £10,520.00
+  Stage 1 Cost: £4,400.00
+  Stage 2 Cost: £6,120.00
+
+Shift Allocation:
+  Regular Shifts: 55
+  Overtime Shifts: 0
+  Emergency Shifts: 34.0
+  Cancellations: 0.0
+
+Workforce Utilization:
+  Nurses Working: 8/8
+  Min Shifts per Nurse: 6
+  Avg Shifts per Nurse: 6.9
+  Max Shifts per Nurse: 7
+  Workload Range: 1
+
+================================================================================
+1. SDM Basic (No CVaR, No Fatigue)
+================================================================================
+Status: Optimal
+Solve Time: 0.27s
+
+Costs:
+  Total Cost: £12,300.00
+  Stage 1 Cost: £5,500.00
+  Stage 2 Cost: £6,800.00
+
+Shift Allocation:
+  Regular Shifts: 55
+  Overtime Shifts: 0
+  Emergency Shifts: 34.0
+  Cancellations: 0.0
+
+Workforce Utilization:
+  Nurses Working: 8/8
+  Min Shifts per Nurse: 6
+  Avg Shifts per Nurse: 6.9
+  Max Shifts per Nurse: 7
+  Workload Range: 1
+
+================================================================================
+3. SDM with High Fatigue Penalty (weight=100)
+================================================================================
+Status: Optimal
+Solve Time: 0.28s
+
+Costs:
+  Total Cost: £12,300.00
+  Stage 1 Cost: £5,500.00
+  Stage 2 Cost: £6,800.00
+
+Shift Allocation:
+  Regular Shifts: 55
+  Overtime Shifts: 0
+  Emergency Shifts: 34.0
+  Cancellations: 0.0
+
+Workforce Utilization:
+  Nurses Working: 8/8
+  Min Shifts per Nurse: 6
+  Avg Shifts per Nurse: 6.9
+  Max Shifts per Nurse: 7
+  Workload Range: 1
+
+================================================================================
+2. SDM with Fatigue (λ=0.03, weight=50)
+================================================================================
+Status: Optimal
+Solve Time: 0.28s
+
+Costs:
+  Total Cost: £12,300.00
+  Stage 1 Cost: £5,500.00
+  Stage 2 Cost: £6,800.00
+
+Shift Allocation:
+  Regular Shifts: 55
+  Overtime Shifts: 0
+  Emergency Shifts: 34.0
+  Cancellations: 0.0
+
+Workforce Utilization:
+  Nurses Working: 8/8
+  Min Shifts per Nurse: 6
+  Avg Shifts per Nurse: 6.9
+  Max Shifts per Nurse: 7
+  Workload Range: 1
+
+================================================================================
+4. SDM-CVaR (β=0.95, W=50)
+================================================================================
+Status: Optimal
+Solve Time: 0.33s
+
+Costs:
+  Total Cost: £12,300.00
+  Stage 1 Cost: £5,500.00
+  Stage 2 Cost: £6,800.00
+
+Shift Allocation:
+  Regular Shifts: 55
+  Overtime Shifts: 0
+  Emergency Shifts: 34.0
+  Cancellations: 0.0
+
+Workforce Utilization:
+  Nurses Working: 8/8
+  Min Shifts per Nurse: 6
+  Avg Shifts per Nurse: 6.9
+  Max Shifts per Nurse: 7
+  Workload Range: 1
+
+================================================================================
+5. SDM-CVaR Conservative (β=0.99, W=30)
+================================================================================
+Status: Optimal
+Solve Time: 0.35s
+
+Costs:
+  Total Cost: £12,300.00
+  Stage 1 Cost: £5,500.00
+  Stage 2 Cost: £6,800.00
+
+Shift Allocation:
+  Regular Shifts: 55
+  Overtime Shifts: 0
+  Emergency Shifts: 34.0
+  Cancellations: 0.0
+
+Workforce Utilization:
+  Nurses Working: 8/8
+  Min Shifts per Nurse: 6
+  Avg Shifts per Nurse: 6.9
+  Max Shifts per Nurse: 7
+  Workload Range: 1
+
+================================================================================
+6. Full Model (CVaR + Fatigue)
+================================================================================
+Status: Optimal
+Solve Time: 0.29s
+
+Costs:
+  Total Cost: £12,300.00
+  Stage 1 Cost: £5,500.00
+  Stage 2 Cost: £6,800.00
+
+Shift Allocation:
+  Regular Shifts: 55
+  Overtime Shifts: 0
+  Emergency Shifts: 34.0
+  Cancellations: 0.0
+
+Workforce Utilization:
+  Nurses Working: 8/8
+  Min Shifts per Nurse: 6
+  Avg Shifts per Nurse: 6.9
+  Max Shifts per Nurse: 7
+  Workload Range: 1
+
+================================================================================
+7. Tight Constraints (n3=3)
+================================================================================
+Status: Optimal
+Solve Time: 0.32s
+
+Costs:
+  Total Cost: £12,300.00
+  Stage 1 Cost: £5,500.00
+  Stage 2 Cost: £6,800.00
+
+Shift Allocation:
+  Regular Shifts: 55
+  Overtime Shifts: 0
+  Emergency Shifts: 34.0
+  Cancellations: 0.0
+
+Workforce Utilization:
+  Nurses Working: 8/8
+  Min Shifts per Nurse: 6
+  Avg Shifts per Nurse: 6.9
+  Max Shifts per Nurse: 7
+  Workload Range: 1
