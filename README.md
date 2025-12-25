@@ -7,6 +7,9 @@ A research-grade implementation of He et al. (2019) with significant enhancement
 [![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.45-FF4B4B.svg)](https://streamlit.io)
+[![PuLP](https://img.shields.io/badge/PuLP-2.9.0-green.svg)](https://coin-or.github.io/pulp/)
+[![Gurobi](https://img.shields.io/badge/Gurobi-11.0-red.svg)](https://www.gurobi.com/)
+[![HiGHS](https://img.shields.io/badge/HiGHS-1.7-orange.svg)](https://highs.dev/)
 
 ## Key Features
 
