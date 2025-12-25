@@ -1,0 +1,42 @@
+/Users/ibrahim/Documents/GitHub/NSS/model.py:380: UserWarning: 
+⚠️  Peak daily demand (15 nurses/day) > available nurses (12)
+   → Some days will require emergency staff
+   → This is expected - model handles it via recourse (α)
+  warn_module.warn("\n" + "\n".join(feasibility_details['warnings']), UserWarning)
+================================================================================
+PARAMETER TUNING EXPERIMENTS
+================================================================================
+
+Factorial Design: 3×3×3×3 = 81 configurations
+Replications per config: 30
+Total runs: 2430 (2,430 experiments)
+Estimated time: ~15-30 hours with 600s timeout per run
+
+Factors:
+  Lambda: [0.02, 0.03, 0.04]
+  Weight: [30, 50, 80]
+  Threshold: [0.6, 0.7, 0.8]
+  Demand: ['Low', 'Medium', 'High']
+
+Started: 2025-12-13 18:14:54
+================================================================================
+
+Generated 81 unique configurations
+
+[Run 1/2430] Config 1/81
+
+================================================================================
+Config 1 | λ=0.02 w=$30 T=0.6 D=Low Rep=1
+================================================================================
+Generating instance: 12 nurses × 10 days × 5 scenarios
+Parameters: λ=0.02, weight=$30, threshold=0.6
+Work rules: n3=0, q_plus=$400
+Solving model...
+Set parameter Username
+Set parameter LicenseID to value 2742234
+Academic license - for non-commercial use only - expires 2026-11-20
+Set parameter Threads to value 8
+Set parameter Presolve to value 2
+Set parameter MIPFocus to value 1
+Set parameter Cuts to value 2
+Set parameter Heuristics to value 0.1

@@ -246,7 +246,9 @@ def build_and_solve_model(
             - "AUTO": Automatically select best available free solver (HiGHS or CBC)
             - "HiGHS": Use HiGHS solver (faster, recommended if installed)
             - "CBC": Use COIN-OR CBC solver (reliable, slower)
-            - "GUROBI": Use Gurobi (requires license)    
+            - "GUROBI": Use Gurobi (requires license)
+            - "CPLEX": Use IBM CPLEX (requires license)
+    
     Returns:
         tuple: (prob, status)
             - prob (pulp.LpProblem): The solved PuLP optimization model containing:
@@ -795,67 +797,20 @@ Suggested Solutions:
     # Purpose: Hospital regulation from paper (Section 5.1)
     # Note: This constraint forces the model to use regular shifts more and 
     #       limits overtime to truly exceptional cases
-    #
-    # CONFIGURATION:
-    #   - If allow_overtime_paradox=True (Paper Mode): This constraint is SKIPPED
-    #   - If allow_overtime_paradox=False (NSS Mode): This constraint is ENFORCED
     # ============================================================================
-    allow_overtime_paradox = model_params.get('allow_overtime_paradox', True) # Default to Paper Mode
-    
-    if len(J_days) >= 7 and not allow_overtime_paradox:
-        # Calculate weeks - each 7 days is a week
-        num_weeks = len(J_days) // 7
-        remainder_days = len(J_days) % 7
-        
-        for i in I_nurses:
-            # Full weeks
-            for week in range(num_weeks):
-                week_start = week * 7 + 1
-                week_end = (week + 1) * 7
-                week_days = [d for d in J_days if week_start <= d <= week_end]
-                
-                prob += (
-                    pulp.lpSum(so[i][j][k] for j in week_days for k in K_shifts) <= 1,
-                    f"MaxOvertimePerWeek_{i}_week{week}"
-                )
-            
-            # Remainder days (if planning period is not exact weeks)
-            if remainder_days > 0:
-                remainder_start = num_weeks * 7 + 1
-                remainder_days_list = [d for d in J_days if d >= remainder_start]
-                
-                prob += (
-                    pulp.lpSum(so[i][j][k] for j in remainder_days_list for k in K_shifts) <= 1,
-                    f"MaxOvertimePerWeek_{i}_remainder"
-                )
-    
     # ============================================================================
-    # CONSTRAINT 8: Regular Shift Quota (Paper vs NSS Logic)
+    # CONSTRAINT 8: Minimum Regular Shifts per Nurse (IF WORKING)
     # ============================================================================
-    # CONFIGURATION:
-    # 1. Paper Mode (allow_overtime_paradox=True):
-    #    Mathematical: Σⱼₖ sr_{ijk} ≥ n₃ · SR_i
-    #    Meaning: Minimum requirement only. Solver will prioritize cheaper regular shifts.
-    #    Result: "Overtime Paradox" (0 overtime used)
-    #
-    # 2. NSS Mode (allow_overtime_paradox=False):
-    #    Mathematical: Σⱼₖ sr_{ijk} == n₃ · SR_i
-    #    Meaning: Strict quota. Identify exactly n3 shifts as "Regular".
-    #    Result: Forces model to use Overtime for any extra work.
+    # Mathematical: Σⱼₖ sr_{ijk} ≥ n₃ · SR_i  ∀i ∈ I
+    # Meaning: IF a nurse works any shifts (SR_i=1), THEN they must work ≥ n₃ regular shifts
+    #          If a nurse doesn't work (SR_i=0), this constraint is 0 ≥ 0 (satisfied)
+    # Purpose: Ensures fair work distribution and job security for WORKING nurses only
     # ============================================================================
     for i in I_nurses:
-        if allow_overtime_paradox:
-             # Paper Mode: Minimum constraint (allows cheap regular shifts to dominate)
-             prob += (
-                pulp.lpSum(sr[i][j][k] for j in J_days for k in K_shifts) >= n3 * SR[i],
-                f"MinRegularShifts_{i}"
-            )
-        else:
-            # NSS Mode: Strict Equality (Forces overtime usage)
-            prob += (
-                pulp.lpSum(sr[i][j][k] for j in J_days for k in K_shifts) == n3 * SR[i],
-                f"StrictRegularQuota_{i}"
-            )
+        prob += (
+            pulp.lpSum(sr[i][j][k] for j in J_days for k in K_shifts) >= n3 * SR[i],
+            f"MinRegularShifts_{i}"
+        )
         
     # ============================================================================
     # CONSTRAINT 9: Minimum Complete Weekends Off (ADVANCED)

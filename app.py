@@ -4,7 +4,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import model as m  # Keep for backward compatibility
+import model as m  # Back to using the unified model
 # `model_oop` removed — use functional API in `model.py` instead
 from io import BytesIO
 import json
@@ -497,8 +497,8 @@ with st.sidebar:
         - Stage 2: Emergency ($q^+$) used when actual demand exceeds plan
         
         💡 **Overtime vs Emergency:** 
-        - Overtime is cheaper but limited by $n_3$ (min regular shifts)
-        - If overtime capacity is too low, emergency staff will be used instead
+        - Overtime is cheaper than emergency staff ($c_2 < q^+$)
+        - The model will choose the optimal mix based on these costs and demand risk
         """)
         c1 = st.number_input("Regular Shift Cost ($c_1$)", 0.0, 10000.0, 100.0, 1.0)
         c2 = st.number_input("Overtime Shift Cost ($c_2$)", 0.0, 10000.0, 150.0, 1.0)
@@ -553,24 +553,17 @@ with st.sidebar:
         n2 = st.slider("Max Night Shifts ($n_2$)", 0, 15, 5, 1)
         n3 = st.slider("Min Regular Shifts ($n_3$)", 0, 20, 5, 1)
         
-        # NEW: Overtime enforcement option
-        enforce_max_regular = st.checkbox(
-            "⭐ Enforce Max Regular Shifts (Force Overtime)",
-            value=False,
-            help="If enabled, caps regular shifts at n3, forcing shifts beyond n3 to be overtime. "
-                 "Without this, the model treats all Stage 1 shifts as 'regular' (cheaper)."
-        )
-        
         # Show overtime capacity info
         overtime_capacity = n1 - n3
-        if enforce_max_regular:
-            st.success(f"✅ Overtime enforced: Each nurse does ≤{n3} regular shifts, then {overtime_capacity} overtime shifts available")
-        elif overtime_capacity <= 2:
-            st.warning(f"⚠️ Low overtime capacity: Only {overtime_capacity} overtime slots available per nurse. "
-                      f"Enable 'Force Overtime' above or reduce $n_3$ to see overtime usage.")
-        else:
-            st.info(f"ℹ️ Overtime capacity: Up to {overtime_capacity} overtime shifts per nurse (= $n_1$ - $n_3$). "
-                   f"Enable 'Force Overtime' above to activate.")
+        st.info(f"ℹ️ Overtime capacity: Up to {overtime_capacity} overtime shifts per nurse (= $n_1$ - $n_3$)")
+        
+        st.markdown("---")
+        st.caption("⚙️ **Overtime Logic Strategy**")
+        enable_nss_overtime = st.checkbox(
+            "Enable NSS Strict Overtime Rules", 
+            value=False,
+            help="If checked: Forces Strict Regular Quota and Weekly Overtime Caps (NSS Enhanced). If unchecked: Uses original Paper logic (Standard)."
+        )
     
     # NEW: Advanced constraints for university project
     with st.expander("🏖️ Weekend Constraints (Advanced)", expanded=False):
@@ -693,6 +686,61 @@ with st.sidebar:
     
     st.divider()
     
+    # --- Fatigue Modeling ---
+    st.header("🧠 Fatigue Modeling")
+    
+    enable_fatigue = st.checkbox(
+        "Enable Fatigue Modeling",
+        value=True,
+        help="Include exponential fatigue model (Jaber et al., 2013) in optimization. "
+             "When enabled, considers nurse fatigue accumulation and patient safety costs."
+    )
+    
+    # Fatigue parameters (only shown if fatigue enabled)
+    if enable_fatigue:
+        with st.expander("⚙️ Fatigue Parameters", expanded=False):
+            st.caption("Configure the exponential fatigue model: F(t) = 1 - e^(-λt)")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                lambda_param = st.number_input(
+                    "Fatigue Rate (λ)",
+                    0.01, 0.10, 0.03, 0.01,
+                    help="Rate of fatigue accumulation. Default: 0.03 from Jaber et al. (2013)"
+                )
+                
+                patient_safety_weight = st.number_input(
+                    "Patient Safety Weight ($)",
+                    0.0, 200.0, 50.0, 5.0,
+                    help="Cost per unit of fatigue (penalty for patient safety risk)"
+                )
+            
+            with col2:
+                max_fatigue_threshold = st.slider(
+                    "Max Fatigue Threshold",
+                    0.50, 0.90, 0.70, 0.05,
+                    help="Maximum allowed fatigue level (0=fresh, 1=exhausted). Nurses cannot exceed this."
+                )
+                
+                shift_duration = st.number_input(
+                    "Shift Duration (hours)",
+                    8, 16, 12, 1,
+                    help="Duration of each shift in hours"
+                )
+            
+            st.info(f"💡 **PWL Approximation:** Using 8 segments (0.713% max error, 0.398% avg error)")
+    else:
+        # Set defaults when fatigue disabled
+        lambda_param = 0.03
+        patient_safety_weight = 0.0  # Key: weight=0 effectively disables fatigue cost
+        max_fatigue_threshold = 0.70
+        shift_duration = 12
+        
+        st.warning("⚠️ **Fatigue modeling disabled.** The system will optimize costs without considering nurse fatigue or patient safety.")
+    
+    st.divider()
+    
     # --- Solver Selection ---
     st.header("⚙️ Solver Configuration")
     
@@ -808,8 +856,11 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
         'c3': c3, 'c4': c4,  # Soft constraint penalties
         'n1': n1, 'n2': n2, 'n3': n3,
         
-        # Overtime enforcement
-        'enforce_max_regular': enforce_max_regular,
+        # Fatigue modeling parameters
+        'lambda_param': lambda_param,
+        'patient_safety_weight': patient_safety_weight,
+        'max_fatigue_threshold': max_fatigue_threshold,
+        'shift_duration': shift_duration,
         
         # Advanced constraints (NEW for university project)
         'n4': n4,
@@ -817,6 +868,9 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
         'night_rest_enabled': night_rest_enabled,
         'min_consecutive_nights': min_consecutive_nights,
         'days_off_after_nights': days_off_after_nights,
+        
+        # Logic Switch
+        'allow_overtime_paradox': not enable_nss_overtime,  # True = Paper Mode, False = NSS Mode
         
         # Recourse bounds (Constraints 17-18 from paper)
         'max_emergency_staff': max_emergency_staff,
@@ -1158,7 +1212,16 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
                 - **Total Capacity:** {total_capacity} shifts ({num_nurses} × {n1})
                 """)
                 
-                st.markdown("#### 💼 Demand vs Capacity")
+                if max_daily_demand > total_capacity:
+                    st.error(f"⚠️ **Max daily demand ({max_daily_demand:.0f}) exceeds capacity ({total_capacity})!**")
+            
+            
+            # Additional Constraints
+            # Additional Constraints
+            st.markdown("### �️ Constraints")
+            
+            with col2:
+                st.markdown("#### �💼 Demand vs Capacity")
                 utilization = avg_demand / total_capacity * 100 if total_capacity > 0 else 0
                 st.info(f"""
                 - **Average Total Demand:** {avg_demand:.0f} shifts/scenario
@@ -1167,10 +1230,6 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
                 - **Utilization:** {utilization:.1f}%
                 """)
                 
-                if max_daily_demand > total_capacity:
-                    st.error(f"⚠️ **Max daily demand ({max_daily_demand:.0f}) exceeds capacity ({total_capacity})!**")
-            
-            with col2:
                 st.markdown("#### ⚙️ Constraint Tightness")
                 st.info(f"""
                 - **Max total shifts (n₁):** {n1}
@@ -1681,10 +1740,8 @@ if st.session_state.results is not None:
                 use_container_width=True
             )
         except (ValueError, ImportError):
-            # Silently skip - kaleido is optional
-            with st.expander("� Want to download heatmap as image?", expanded=False):
-                st.info("Install the optional **kaleido** package to enable PNG export:")
-                st.code("pip install kaleido", language="bash")
+            # Silently skip if kaleido is not installed
+            st.write("")
     
     # ===== TAB 2: COST ANALYSIS =====
     with tabs[1]:
@@ -1708,7 +1765,7 @@ if st.session_state.results is not None:
                 Baseline demand ({baseline_demand:.0f} shifts) is low enough to be covered by regular shifts alone.
                 Emergency staff ({total_emergency:.0f} shifts) handles excess demand in high-demand scenarios.
                 
-                **Why no overtime?** Overtime ($150) is more expensive than regular ($100), so the model only uses 
+                **Why no overtime?** Overtime (${model_params.get('c2', 150)}) is more expensive than regular (${model_params.get('c1', 100)}), so the model only uses 
                 it when forced by capacity constraints.
                 
                 **To see overtime in action:** Increase baseline demand or reduce available nurses.
@@ -1778,21 +1835,63 @@ if st.session_state.results is not None:
         # Shift distribution
         st.subheader("📈 Shift Allocation")
         
+        # Calculate Average Emergency Staffing (Mean across scenarios)
+        scenario_df = results['scenario_df']
+        avg_emergency = scenario_df['shortage_shifts'].mean() if not scenario_df.empty else 0
+        
         shift_data = pd.DataFrame({
-            'Type': ['Regular', 'Overtime'],
-            'Count': [cost['total_regular_shifts'], cost['total_overtime_shifts']]
+            'Category': ['Regular', 'Overtime', 'Emergency (Avg)'],
+            'Count': [
+                cost['total_regular_shifts'], 
+                cost['total_overtime_shifts'],
+                avg_emergency
+            ],
+            'Color': ['#6366F1', '#818CF8', '#EF4444'] # Indigo, Indigo-Light, Red-Rose
         })
         
+        # Professional Horizontal Bar Chart
         fig_bar = px.bar(
             shift_data,
-            x='Type',
-            y='Count',
-            title='Regular vs Overtime Shifts',
-            color='Type',
-            text='Count'
+            y='Category',
+            x='Count',
+            orientation='h',
+            text='Count',
+            color='Category',
+            color_discrete_map={
+                'Regular': '#6366F1',
+                'Overtime': '#A5B4FC',
+                'Emergency (Avg)': '#F87171'
+            },
+            template='plotly_white'
         )
-        fig_bar.update_traces(textposition='outside')
-        st.plotly_chart(fig_bar, use_container_width=True)
+        
+        fig_bar.update_traces(
+            texttemplate='<b>%{text:.1f}</b> Shifts', 
+            textposition='outside',
+            hovertemplate='<b>%{y}</b><br>Count: %{x:.1f} shifts<extra></extra>',
+            marker_line_width=0,
+            width=0.6 # Adjust bar thickness
+        )
+        
+        fig_bar.update_layout(
+            title={
+                'text': "<b>Staffing Mix Distribution</b>",
+                'y':0.95, 'x':0.5, 'xanchor': 'center', 'yanchor': 'top',
+                'font': {'size': 20, 'color': '#1E293B'}
+            },
+            bargap=0.15,
+            height=350,
+            showlegend=False,
+            xaxis_visible=False, # Hide x-axis as we have text labels
+            yaxis_title="",
+            yaxis_autorange="reversed", # Keep Regular on top
+            margin=dict(l=20, r=80, t=60, b=20),
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(family="Inter, sans-serif", size=14, color="#475569")
+        )
+        
+        st.plotly_chart(fig_bar, use_container_width=True, config={'displayModeBar': False})
     
     # ===== TAB 3: COVERAGE ANALYSIS =====
     with tabs[2]:
@@ -2096,34 +2195,65 @@ if st.session_state.results is not None:
         story.append(Paragraph("COMPLETE NURSE ROSTER", heading_style))
         roster_df = results['roster_df']
         
-        # Prepare roster data for PDF
-        roster_data = [roster_df.columns.tolist()]  # Header row
-        for _, row in roster_df.iterrows():
-            roster_data.append(row.tolist())
+        # Prepare roster data for PDF (Split into Schedule and Summary)
         
-        # Calculate column widths dynamically
-        num_cols = len(roster_df.columns)
-        available_width = 7.5 * inch  # Total available width with narrow margins
-        col_width = available_width / num_cols
-        col_widths = [col_width] * num_cols
+        # 1. Daily Schedule Table
+        day_cols = [col for col in roster_df.columns if col.startswith("D")]
+        schedule_cols = ['Nurse'] + day_cols
+        schedule_view = roster_df[schedule_cols]
         
-        roster_table = Table(roster_data, colWidths=col_widths, repeatRows=1)
+        schedule_data = [schedule_view.columns.tolist()]  # Header
+        for _, row in schedule_view.iterrows():
+            schedule_data.append(row.tolist())
+        
+        # Determine column widths for schedule
+        num_sched_cols = len(schedule_cols)
+        available_width = 7.5 * inch
+        # Nurse column wider, days narrower
+        nurse_col_width = 1.0 * inch
+        day_col_width = (available_width - nurse_col_width) / (num_sched_cols - 1)
+        sched_col_widths = [nurse_col_width] + [day_col_width] * (num_sched_cols - 1)
+        
+        roster_table = Table(schedule_data, colWidths=sched_col_widths, repeatRows=1)
         roster_table.setStyle(TableStyle([
-            # Header row
             ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#667eea')),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 7),
+            ('FONTSIZE', (0, 0), (-1, 0), 6),
             ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-            # Data rows
-            ('FONTSIZE', (0, 1), (-1, -1), 6),
-            ('ALIGN', (0, 1), (0, -1), 'LEFT'),  # Nurse names left-aligned
-            ('ALIGN', (1, 1), (-1, -1), 'CENTER'),  # Shifts centered
+            ('FONTSIZE', (0, 1), (-1, -1), 5),
+            ('ALIGN', (0, 1), (0, -1), 'LEFT'),
+            ('ALIGN', (1, 1), (-1, -1), 'CENTER'),
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-            # Alternating row colors
             ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f7fafc')])
         ]))
         story.append(roster_table)
+        story.append(Spacer(1, 0.2*inch))
+        
+        # 2. Summary Metrics Table
+        story.append(Paragraph("WORKLOAD SUMMARY", heading_style))
+        summary_cols = ['Nurse', 'Total_Regular', 'Total_Overtime', 'Total_Nights', 'Total_Shifts']
+        summary_view = roster_df[summary_cols]
+        
+        summary_data_list = [summary_view.columns.tolist()]
+        for _, row in summary_view.iterrows():
+            summary_data_list.append(row.tolist())
+            
+        summary_col_widths = [1.5*inch] + [1.2*inch] * (len(summary_cols) - 1)
+        
+        metrics_table = Table(summary_data_list, colWidths=summary_col_widths, repeatRows=1)
+        metrics_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4a5568')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 8),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('ALIGN', (0, 1), (0, -1), 'LEFT'),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f0f4f8')])
+        ]))
+        story.append(metrics_table)
         story.append(PageBreak())
         
         # COVERAGE ANALYSIS
