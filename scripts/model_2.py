@@ -246,7 +246,9 @@ def build_and_solve_model(
             - "AUTO": Automatically select best available free solver (HiGHS or CBC)
             - "HiGHS": Use HiGHS solver (faster, recommended if installed)
             - "CBC": Use COIN-OR CBC solver (reliable, slower)
-            - "GUROBI": Use Gurobi (requires license)    
+            - "GUROBI": Use Gurobi (requires license)
+            - "CPLEX": Use IBM CPLEX (requires license)
+    
     Returns:
         tuple: (prob, status)
             - prob (pulp.LpProblem): The solved PuLP optimization model containing:
@@ -277,7 +279,7 @@ def build_and_solve_model(
         >>> params = {
         ...     'c1': 100, 'c2': 150, 'q_plus': 200, 'q_minus': 0,
         ...     'n1': 15, 'n2': 5, 'n3': 10,
-        ...     'sigma': 0.95, 'mu': 50.0
+        ...     'sigma': 0.95, 'mu': 5.0
         ... }
         >>> prob, status = build_and_solve_model(nurses, scenarios, params, "SDM")
         >>> if status == "Optimal":
@@ -299,23 +301,17 @@ def build_and_solve_model(
 
     # --- 1. EXTRACT DATA & CREATE SETS ---
     
-    # Get unique sets
+    # Get sets from the scenario data
     I_nurses = nurses_list  
     J_days = sorted(scenarios_df['day'].unique(), key=int)
     K_shifts = scenarios_df['shift'].unique()
     W_scenarios = scenarios_df['scenario'].unique()
-
-    # Validate we have data to work with (defensive programming)
-    if len(W_scenarios) == 0:
-        raise ValueError("No scenarios provided in scenarios_df - cannot build model")
-    if len(I_nurses) == 0:
-        raise ValueError("No nurses provided in nurses_list - cannot build model")
     
-    # Get demand as a dictionary: (day, shift, scenario) -> demand
+    # Create a fast lookup dictionary for R_jk_omega (Demand)
+    # This is the R_jk^ω from the paper
     R_demand = scenarios_df.set_index(['day', 'shift', 'scenario'])['demand'].to_dict()
 
     # Get probabilities (assume all scenarios are equally likely for this prototype)
-    # Now guaranteed safe because len(W_scenarios) > 0
     scenario_probability = {w: 1.0 / len(W_scenarios) for w in W_scenarios}
     
     # Extract model parameters from the dictionary
@@ -330,7 +326,7 @@ def build_and_solve_model(
     
     # CVaR parameters (if used)
     sigma = model_params.get('sigma', 0.95) # Default 0.95
-    mu = model_params.get('mu', 50.0)      # Default 50.0 (increased from 5.0 based on sensitivity testing)
+    mu = model_params.get('mu', 5.0)       # Default 5.0
     
     # NEW ADVANCED CONSTRAINTS PARAMETERS
     # Constraint 9: Minimum complete weekends off
@@ -801,67 +797,20 @@ Suggested Solutions:
     # Purpose: Hospital regulation from paper (Section 5.1)
     # Note: This constraint forces the model to use regular shifts more and 
     #       limits overtime to truly exceptional cases
-    #
-    # CONFIGURATION:
-    #   - If allow_overtime_paradox=True (Paper Mode): This constraint is SKIPPED
-    #   - If allow_overtime_paradox=False (NSS Mode): This constraint is ENFORCED
     # ============================================================================
-    allow_overtime_paradox = model_params.get('allow_overtime_paradox', True) # Default to Paper Mode
-    
-    if len(J_days) >= 7 and not allow_overtime_paradox:
-        # Calculate weeks - each 7 days is a week
-        num_weeks = len(J_days) // 7
-        remainder_days = len(J_days) % 7
-        
-        for i in I_nurses:
-            # Full weeks
-            for week in range(num_weeks):
-                week_start = week * 7 + 1
-                week_end = (week + 1) * 7
-                week_days = [d for d in J_days if week_start <= d <= week_end]
-                
-                prob += (
-                    pulp.lpSum(so[i][j][k] for j in week_days for k in K_shifts) <= 1,
-                    f"MaxOvertimePerWeek_{i}_week{week}"
-                )
-            
-            # Remainder days (if planning period is not exact weeks)
-            if remainder_days > 0:
-                remainder_start = num_weeks * 7 + 1
-                remainder_days_list = [d for d in J_days if d >= remainder_start]
-                
-                prob += (
-                    pulp.lpSum(so[i][j][k] for j in remainder_days_list for k in K_shifts) <= 1,
-                    f"MaxOvertimePerWeek_{i}_remainder"
-                )
-    
     # ============================================================================
-    # CONSTRAINT 8: Regular Shift Quota (Paper vs NSS Logic)
+    # CONSTRAINT 8: Minimum Regular Shifts per Nurse (IF WORKING)
     # ============================================================================
-    # CONFIGURATION:
-    # 1. Paper Mode (allow_overtime_paradox=True):
-    #    Mathematical: Σⱼₖ sr_{ijk} ≥ n₃ · SR_i
-    #    Meaning: Minimum requirement only. Solver will prioritize cheaper regular shifts.
-    #    Result: "Overtime Paradox" (0 overtime used)
-    #
-    # 2. NSS Mode (allow_overtime_paradox=False):
-    #    Mathematical: Σⱼₖ sr_{ijk} == n₃ · SR_i
-    #    Meaning: Strict quota. Identify exactly n3 shifts as "Regular".
-    #    Result: Forces model to use Overtime for any extra work.
+    # Mathematical: Σⱼₖ sr_{ijk} ≥ n₃ · SR_i  ∀i ∈ I
+    # Meaning: IF a nurse works any shifts (SR_i=1), THEN they must work ≥ n₃ regular shifts
+    #          If a nurse doesn't work (SR_i=0), this constraint is 0 ≥ 0 (satisfied)
+    # Purpose: Ensures fair work distribution and job security for WORKING nurses only
     # ============================================================================
     for i in I_nurses:
-        if allow_overtime_paradox:
-             # Paper Mode: Minimum constraint (allows cheap regular shifts to dominate)
-             prob += (
-                pulp.lpSum(sr[i][j][k] for j in J_days for k in K_shifts) >= n3 * SR[i],
-                f"MinRegularShifts_{i}"
-            )
-        else:
-            # NSS Mode: Strict Equality (Forces overtime usage)
-            prob += (
-                pulp.lpSum(sr[i][j][k] for j in J_days for k in K_shifts) == n3 * SR[i],
-                f"StrictRegularQuota_{i}"
-            )
+        prob += (
+            pulp.lpSum(sr[i][j][k] for j in J_days for k in K_shifts) >= n3 * SR[i],
+            f"MinRegularShifts_{i}"
+        )
         
     # ============================================================================
     # CONSTRAINT 9: Minimum Complete Weekends Off (ADVANCED)
@@ -2363,7 +2312,7 @@ def get_default_params():
         'n2': 5,          # Max night shifts
         'n3': 10,         # Min regular shifts
         'sigma': 0.95,    # CVaR confidence level
-        'mu': 50.0,       # Max acceptable shortage (CVaR threshold)
+        'mu': 5.0,        # Max acceptable shortage
         
         # Advanced constraints (NEW for university project)
         'n4': 0,          # Min complete weekends off (0 = disabled)

@@ -15,4 +15,8 @@ plotly>=5.17.0
 kaleido>=0.2.1  
 
 # PDF generation
-reportlab>=4.0.0  
+reportlab>=4.0.0
+
+# Statistical analysis
+scipy>=1.10.0  kaleido
+plotly>=6.0.0

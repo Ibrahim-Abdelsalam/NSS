@@ -75,24 +75,24 @@ if 'N' in K_shifts:
 
 ---
 
-#### **CONSTRAINT 8: Minimum Regular Shifts per Nurse** ✅
-**Location**: Lines 256-267 in `model.py`
+#### **CONSTRAINT 8: Minimum Regular Shifts per Nurse (IF WORKING)** ✅
+**Location**: Lines 610-615 in `model.py`
 
 **Mathematical Formula:**
 ```
-Σⱼₖ sr_{ijk} ≥ n₃    ∀i ∈ I
+Σⱼₖ sr_{ijk} ≥ n₃ × SR_i    ∀i ∈ I
 ```
 
 **Code:**
 ```python
 for i in I_nurses:
     prob += (
-        pulp.lpSum(sr[i][j][k] for j in J_days for k in K_shifts) >= n3,
+        pulp.lpSum(sr[i][j][k] for j in J_days for k in K_shifts) >= n3 * SR[i],
         f"MinRegularShifts_{i}"
     )
 ```
 
-**What it does:** Each nurse works at least `n₃` regular shifts (ensures fair work distribution, e.g., min 10 shifts).
+**What it does:** IF a nurse works any shifts (SR_i=1), THEN they must work at least `n₃` regular shifts. If a nurse doesn't work at all (SR_i=0), this constraint is satisfied automatically (0 ≥ 0). This ensures fair work distribution for active nurses without forcing all nurses to work.
 
 ---
 

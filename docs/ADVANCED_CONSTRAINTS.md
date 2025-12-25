@@ -368,10 +368,10 @@ model_params = {
 - Using CBC solver instead of Gurobi
 
 **Solutions:**
-1. **Use Gurobi solver:**
+1. **Use Gurobi or HiGHS solver:**
    - 10-100× faster than CBC
-   - Free academic license
-   - See `INSTALL_GUROBI.md`
+   - Free academic license available for Gurobi: https://www.gurobi.com/academia/
+   - HiGHS is free and open-source: `pip install highspy`
 
 2. **Reduce problem size:**
    - Fewer nurses (20 instead of 50)
