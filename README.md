@@ -1,4 +1,4 @@
-# 🏥 Nurse Scheduling System (NSS)
+# Nurse Scheduling System (NSS)
 
 **Two-Stage Stochastic Nurse Scheduling with CVaR Risk Control**
 
@@ -8,7 +8,7 @@ A research-grade implementation of the nurse scheduling model from He et al. (20
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.45-FF4B4B.svg)](https://streamlit.io)
 
-## 🎯 Key Features
+## Key Features
 
 ### Mathematical Foundation
 - **Two-Stage Stochastic Programming** - Optimizes under demand uncertainty with recourse decisions
@@ -30,18 +30,18 @@ A research-grade implementation of the nurse scheduling model from He et al. (20
 - **Advanced Constraints** - Weekend-off requirements, night shift rest, shift quotas
 - **Comprehensive Validation** - Input validation, feasibility checking, result verification
 
-## 📊 Recent Updates (December 2025)
+## Recent Updates (December 2025)
 
-### 🔥 Major Fixes & Enhancements
-- ✅ **Constraint 8b Added** - Fixed paper's overtime bug (shifts beyond n3 now properly use overtime)
-- ✅ **Baseline Coverage Removed** - Corrected misunderstanding of paper's model structure
-- ✅ **Import Path Fixed** - Resolved `scripts.solver_config` → `solver_config` error
-- ✅ **Comprehensive Documentation** - 10 detailed guides covering all aspects
-- ✅ **Repository Cleanup** - Removed 35+ duplicate/obsolete files (60% reduction)
-- ✅ **Paper Comparison** - Detailed line-by-line analysis vs original paper (DETAILED_COMPARISON.md)
+### Major Fixes & Enhancements
+- **Constraint 8b Added** - Fixed paper's overtime bug (shifts beyond n3 now properly use overtime)
+- **Baseline Coverage Removed** - Corrected misunderstanding of paper's model structure
+- **Import Path Fixed** - Resolved `scripts.solver_config` → `solver_config` error
+- **Comprehensive Documentation** - 10 detailed guides covering all aspects
+- **Repository Cleanup** - Removed 35+ duplicate/obsolete files (60% reduction)
+- **Paper Comparison** - Detailed line-by-line analysis vs original paper (DETAILED_COMPARISON.md)
 
 
-## 🚀 Quick Start
+## Quick Start
 
 ### 1. Installation
 ```bash
@@ -74,23 +74,23 @@ Opens at **http://localhost:8501**
 # - Set n3 = 5 (Min regular shifts)
 # - Set n1 = 14 (Max total shifts)
 # - Set q_plus = 300 (Emergency cost)
-# - ☑️ CHECK "Enforce Max Regular Shifts (Force Overtime)"
+# - [x] CHECK "Enforce Max Regular Shifts (Force Overtime)"
 
 # Expected result: 50 regular + 40-50 overtime shifts
 ```
 
-**📘 Full Guide:** See [OVERTIME_TEST_GUIDE.md](OVERTIME_TEST_GUIDE.md) for detailed testing instructions.
+**Full Guide:** See [OVERTIME_TEST_GUIDE.md](OVERTIME_TEST_GUIDE.md) for detailed testing instructions.
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 NSS/
-├── 🎯 Core Application
+├── Core Application
 │   ├── app.py                      # Streamlit web interface (2233 lines)
 │   ├── model.py                    # Optimization model (1916 lines)
 │   └── solver_config.py            # Solver detection & configuration
 │
-├── 📊 Data & Tests
+├── Data & Tests
 │   ├── data/
 │   │   ├── sample_nurses.csv              # Basic test (10 nurses)
 │   │   ├── sample_scenarios.csv           # Basic scenarios
@@ -106,7 +106,7 @@ NSS/
 │       ├── run_test_with_csv.py           # CSV test utility
 │       └── test_model_validation.py       # Validation tests
 │
-├── 📖 Documentation
+├── Documentation
 │   ├── USER_GUIDE.md                  # Complete user guide
 │   ├── TECHNICAL_GUIDE.md             # Developer documentation
 │   ├── PARAMETER_GUIDE.md             # All parameters explained
@@ -116,29 +116,29 @@ NSS/
 │   ├── PAPER_ANALYSIS.md              # Paper vs implementation
 │   ├── ERROR_LOG.md                   # Overtime issue analysis
 │   ├── DETAILED_COMPARISON.md         # Line-by-line comparison
-│   └── ⭐️ He et al. (2019).pdf        # Original research paper
+│   └── He et al. (2019).pdf           # Original research paper
 │
-├── 📋 Project Files
+├── Project Files
 │   ├── README.md                      # This file
 │   ├── OVERTIME_TEST_GUIDE.md         # Testing guide
 │   ├── requirements.txt               # Python dependencies
 │   └── LICENSE                        # MIT License
 │
-└── 📁 Support Files
+└── Support Files
     ├── expected_outputs/              # Test expectations (JSON)
     ├── notebooks/                     # Jupyter analysis (optional)
     └── loading.gif                    # UI loading animation
 ```
 
-## ⚙️ Solver Configuration
+## Solver Configuration
 
 The model supports multiple optimization solvers with automatic detection:
 
 | Solver | License | Speed | Memory | Recommended For |
 |--------|---------|-------|--------|-----------------|
-| **Gurobi** | Academic (free) / Commercial | ⚡⚡⚡ Fastest (0.06-60s) | Low | **Production use** |
-| **HiGHS** | Open-source (free) | ⚡⚡ Fast (5-300s) | Low | **Testing & development** |
-| **CBC** | Open-source (free) | ⚡ Moderate (30-600s) | Medium | **Fallback option** |
+| **Gurobi** | Academic (free) / Commercial | Fastest (0.06-60s) | Low | **Production use** |
+| **HiGHS** | Open-source (free) | Fast (5-300s) | Low | **Testing & development** |
+| **CBC** | Open-source (free) | Moderate (30-600s) | Medium | **Fallback option** |
 
 ### Installation
 
@@ -154,7 +154,7 @@ pip install highspy
 
 The system auto-detects and uses the best available solver.
 
-## 🎓 Mathematical Model
+## Mathematical Model
 
 ### Two-Stage Stochastic Programming
 
@@ -200,7 +200,7 @@ CVaR_σ ≤ μ
 6. Max total shifts: `Σⱼₖ(sr + so) ≤ n1`
 7. Max night shifts: `Σⱼ(sr_N + so_N) ≤ n2`
 8. Min regular shifts: `Σⱼₖ sr ≥ n3·SR` (if working)
-8b. **Max regular shifts** (optional): `Σⱼₖ sr ≤ n3·SR` ⭐ **Fixes overtime**
+8b. **Max regular shifts** (optional): `Σⱼₖ sr ≤ n3·SR` **Fixes overtime**
 9. Min weekends off (optional)
 10-13. Night rest requirements (optional)
 14-15. Soft penalties (stand-alone shifts, unwanted patterns)
@@ -210,7 +210,7 @@ CVaR_σ ≤ μ
 
 **See:** [DETAILED_COMPARISON.md](docs/DETAILED_COMPARISON.md) for full mathematical formulation and line-by-line comparison with paper.
 
-## 📊 Model Parameters
+## Model Parameters
 
 ### Cost Parameters
 | Parameter | Symbol | Description | Default | Example |
@@ -231,7 +231,7 @@ CVaR_σ ≤ μ
 | `n4` | n₄ | Min complete weekends off | 0 | 0-4 |
 
 ### Advanced Constraints (Optional)
-- **`enforce_max_regular`** - Force overtime usage (Constraint 8b) ⭐
+- **`enforce_max_regular`** - Force overtime usage (Constraint 8b)
 - **`shift_quotas`** - Min/max per shift type (E, D, L, N)
 - **`night_rest_enabled`** - Night shift rest requirements
 - **`max_emergency_staff`** - Cap on emergency staff per shift
@@ -243,9 +243,9 @@ CVaR_σ ≤ μ
 | `sigma` | σ | Confidence level | 0.95 | 0.90-0.99 |
 | `mu` | μ | Max acceptable shortage | 5.0 | Varies |
 
-**📘 Complete Guide:** See [PARAMETER_GUIDE.md](docs/PARAMETER_GUIDE.md) for detailed parameter explanations.
+**Complete Guide:** See [PARAMETER_GUIDE.md](docs/PARAMETER_GUIDE.md) for detailed parameter explanations.
 
-## 📈 Performance Benchmarks
+## Performance Benchmarks
 
 **Test Configuration:**
 - MacBook Pro M1 (8-core)
@@ -254,20 +254,20 @@ CVaR_σ ≤ μ
 
 | Problem Size | Variables | Constraints | Solve Time | Status |
 |-------------|-----------|-------------|------------|--------|
-| Small (10 nurses, 7 days, 3 scenarios) | ~2,400 | ~2,200 | 0.06s | ✅ Optimal |
-| Medium (20 nurses, 14 days, 5 scenarios) | ~9,600 | ~8,800 | 2.3s | ✅ Optimal |
-| Large (40 nurses, 30 days, 10 scenarios) | ~91,000 | ~83,000 | 58s | ✅ Optimal |
-| Very Large (50 nurses, 30 days, 20 scenarios) | ~180,000 | ~165,000 | 5m 23s | ✅ Near-optimal (0.5% gap) |
+| Small (10 nurses, 7 days, 3 scenarios) | ~2,400 | ~2,200 | 0.06s | Optimal |
+| Medium (20 nurses, 14 days, 5 scenarios) | ~9,600 | ~8,800 | 2.3s | Optimal |
+| Large (40 nurses, 30 days, 10 scenarios) | ~91,000 | ~83,000 | 58s | Optimal |
+| Very Large (50 nurses, 30 days, 20 scenarios) | ~180,000 | ~165,000 | 5m 23s | Near-optimal (0.5% gap) |
 
 **HiGHS Solver:** ~10× slower than Gurobi but still practical for medium problems.
 
-## 🧪 Testing & Validation
+## Testing & Validation
 
 ### Test Suite
 ```bash
 # Run comprehensive validation tests
 python scripts/VALIDATE_OVERTIME.py
-# Expected: 4/4 tests PASSED ✅
+# Expected: 4/4 tests PASSED
 
 # Run complete test instance
 python scripts/COMPLETE_TEST_INSTANCE.py
@@ -278,30 +278,30 @@ python scripts/run_test_with_csv.py
 ```
 
 ### Validation Results
-✅ **All core constraints validated** (Constraints 1-18)  
-✅ **Overtime functionality verified** (with enforce_max_regular=True)  
-✅ **CVaR risk management tested** (SDM-CVaR model)  
-✅ **Paper comparison complete** (see DETAILED_COMPARISON.md)  
-✅ **Import errors resolved** (solver_config path fixed)
+- **All core constraints validated** (Constraints 1-18)  
+- **Overtime functionality verified** (with enforce_max_regular=True)  
+- **CVaR risk management tested** (SDM-CVaR model)  
+- **Paper comparison complete** (see DETAILED_COMPARISON.md)  
+- **Import errors resolved** (solver_config path fixed)
 
-## 🔧 Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
-**❌ ModuleNotFoundError: No module named 'scripts.solver_config'**
+**ModuleNotFoundError: No module named 'scripts.solver_config'**
 ```bash
 # Fixed in latest version - import path corrected
 # If you see this, update model.py line 6:
-# from solver_config import ...  # ✅ Correct
+# from solver_config import ...  # Correct
 ```
 
-**❌ Overtime shifts not being generated**
-- ✅ Enable "Enforce max regular shifts (Constraint 8b)" checkbox in UI
+**Overtime shifts not being generated**
+- Enable "Enforce max regular shifts (Constraint 8b)" checkbox in UI
 - Set `n3` (min regular) = `n1` (max total) to force overtime
 - Example: `n1=15, n3=15` → nurses must work overtime to meet demand
 - See [OVERTIME_TEST_GUIDE.md](OVERTIME_TEST_GUIDE.md) for complete instructions
 
-**❌ Solver not found / No solver available**
+**Solver not found / No solver available**
 ```bash
 # Install HiGHS (free):
 pip install highspy
@@ -312,19 +312,19 @@ pip install highspy
 # 3. Run: grbgetkey <your-license-key>
 ```
 
-**❌ Infeasible solution / No solution found**
+**Infeasible solution / No solution found**
 - Reduce demand in `sample_scenarios.csv`
 - Increase available nurses in `sample_nurses.csv`
 - Relax hard constraints (decrease `n1`, `n2`, increase `n3`)
 - Check weekend constraints don't over-constrain the problem
 
-**❌ Very slow solving (>10 minutes)**
+**Very slow solving (>10 minutes)**
 - Reduce problem size (fewer scenarios, shorter horizon)
 - Use Gurobi instead of HiGHS (10× faster)
 - Disable soft constraints (c3=0, c4=0)
 - See [PERFORMANCE_ANALYSIS.md](docs/PERFORMANCE_ANALYSIS.md)
 
-**❌ Memory errors (large problems)**
+**Memory errors (large problems)**
 ```bash
 # Reduce scenario count or planning horizon
 # For 50+ nurses over 30 days:
@@ -332,19 +332,19 @@ pip install highspy
 # - Use time limit: set max_solve_time=300 in solver_config.py
 ```
 
-## 📚 Documentation
+## Documentation
 
 | Document | Description | Status |
 |----------|-------------|--------|
-| [DETAILED_COMPARISON.md](DETAILED_COMPARISON.md) | Line-by-line comparison with He et al. (2019) paper | ⭐ Complete (60KB) |
-| [OVERTIME_TEST_GUIDE.md](OVERTIME_TEST_GUIDE.md) | How to test overtime functionality in Streamlit | ✅ Latest |
-| [TUTORIAL.md](docs/TUTORIAL.md) | Step-by-step walkthrough for beginners | ✅ Available |
-| [CONSTRAINTS_GUIDE.md](docs/CONSTRAINTS_GUIDE.md) | Complete constraint reference (18+ constraints) | ✅ Available |
-| [MODEL_STRUCTURE.md](docs/MODEL_STRUCTURE.md) | Code architecture and design patterns | ✅ Available |
-| [PERFORMANCE_ANALYSIS.md](docs/PERFORMANCE_ANALYSIS.md) | Solver benchmarks and optimization tips | ✅ Available |
-| [ADVANCED_CONSTRAINTS.md](docs/ADVANCED_CONSTRAINTS.md) | Optional constraint details | ✅ Available |
+| [DETAILED_COMPARISON.md](DETAILED_COMPARISON.md) | Line-by-line comparison with He et al. (2019) paper | Complete (60KB) |
+| [OVERTIME_TEST_GUIDE.md](OVERTIME_TEST_GUIDE.md) | How to test overtime functionality in Streamlit | Latest |
+| [TUTORIAL.md](docs/TUTORIAL.md) | Step-by-step walkthrough for beginners | Available |
+| [CONSTRAINTS_GUIDE.md](docs/CONSTRAINTS_GUIDE.md) | Complete constraint reference (18+ constraints) | Available |
+| [MODEL_STRUCTURE.md](docs/MODEL_STRUCTURE.md) | Code architecture and design patterns | Available |
+| [PERFORMANCE_ANALYSIS.md](docs/PERFORMANCE_ANALYSIS.md) | Solver benchmarks and optimization tips | Available |
+| [ADVANCED_CONSTRAINTS.md](docs/ADVANCED_CONSTRAINTS.md) | Optional constraint details | Available |
 
-## 🛠️ Technical Stack
+## Technical Stack
 
 **Core Dependencies:**
 - `gurobipy>=11.0.3` or `highspy>=1.7.0` - MIP solver
@@ -361,11 +361,11 @@ pip install highspy
 **Solver Comparison:**
 | Solver | Speed | License | Memory | Recommended For |
 |--------|-------|---------|--------|-----------------|
-| **Gurobi** | ⭐⭐⭐⭐⭐ | Academic/Commercial | Low | Production use |
-| **HiGHS** | ⭐⭐⭐ | Open-source | Low | Research/testing |
-| **CBC** | ⭐⭐ | Open-source | Medium | Fallback only |
+| **Gurobi** | Fastest | Academic/Commercial | Low | Production use |
+| **HiGHS** | Fast | Open-source | Low | Research/testing |
+| **CBC** | Moderate | Open-source | Medium | Fallback only |
 
-## 📖 Academic Foundation
+## Academic Foundation
 
 **Based on:** He, F., Qu, R., & Investigate, S. (2019). A two-stage stochastic mixed-integer program modelling and hybrid solution approach to re-rostering problems under uncertainty. *European Journal of Operational Research*.
 
@@ -378,28 +378,28 @@ pip install highspy
 - CSV-based data input - practical deployment
 - Comprehensive validation suite - 4 automated tests
 
-## 📊 Project Status
+## Project Status
 
-✅ **Research-Grade Implementation** (December 2024)  
-- Core model: 100% complete (all 18 constraints from paper)  
-- Validation: 4/4 tests passing  
-- Documentation: 10 comprehensive guides  
-- Recent fixes: Import path, overtime, repository cleanup  
-- Test coverage: Overtime, CVaR, emergency staff, soft constraints  
+**Research-Grade Implementation** (December 2024)
+- Core model: 100% complete (all 18 constraints from paper)
+- Validation: 4/4 tests passing
+- Documentation: 10 comprehensive guides
+- Recent fixes: Import path, overtime, repository cleanup
+- Test coverage: Overtime, CVaR, emergency staff, soft constraints
 
 **Latest Updates (Dec 2024):**
-- ✅ Fixed import path (scripts.solver_config → solver_config)
-- ✅ Repository cleanup (60% file reduction, 35+ files removed)
-- ✅ Added DETAILED_COMPARISON.md (line-by-line vs paper)
-- ✅ Created OVERTIME_TEST_GUIDE.md (complete testing instructions)
-- ✅ Validated all constraints against paper
-- ✅ Updated README with clean structure
+- Fixed import path (scripts.solver_config → solver_config)
+- Repository cleanup (60% file reduction, 35+ files removed)
+- Added DETAILED_COMPARISON.md (line-by-line vs paper)
+- Created OVERTIME_TEST_GUIDE.md (complete testing instructions)
+- Validated all constraints against paper
+- Updated README with clean structure
 
-## 📄 License
+## License
 
 MIT License - See [LICENSE](LICENSE) for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - He et al. (2019) for the original SDM-CVaR model
 - Gurobi Optimization for academic license
@@ -417,5 +417,5 @@ MIT License - See [LICENSE](LICENSE) for details.
 }
 ```
 
-**⭐ Star this repo if you find it useful for your research!**
+**Star this repo if you find it useful for your research!**
 
