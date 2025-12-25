@@ -399,10 +399,16 @@ with st.sidebar:
                     st.stop()
 
                 # Check for duplicates
-                if len(nurses_list) != len(set(nurses_list)):
-                    duplicates = [n for n in nurses_list if nurses_list.count(n) > 1]
-                    st.warning(f"⚠️ Duplicate nurse names found: {set(duplicates)}")
 
+                # Check for duplicates and auto-remove
+                duplicates = [name for name in set(nurses_list) if nurses_list.count(name) > 1]
+                if duplicates:
+                    st.warning(f"⚠️ Duplicate nurse names found: {set(duplicates)}")
+                    st.info("✨ Automatically removing duplicates (keeping first occurrence)")
+                    # Remove duplicates while preserving order
+                    seen = set()
+                    nurses_list = [x for x in nurses_list if not (x in seen or seen.add(x))]
+                    st.success(f"✅ Cleaned to {len(nurses_list)} unique nurses")
                 st.success(f"✓ Loaded {len(nurses_list)} nurses")
                 
                 # ============================================================

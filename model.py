@@ -277,7 +277,7 @@ def build_and_solve_model(
         >>> params = {
         ...     'c1': 100, 'c2': 150, 'q_plus': 200, 'q_minus': 0,
         ...     'n1': 15, 'n2': 5, 'n3': 10,
-        ...     'sigma': 0.95, 'mu': 5.0
+        ...     'sigma': 0.95, 'mu': 50.0
         ... }
         >>> prob, status = build_and_solve_model(nurses, scenarios, params, "SDM")
         >>> if status == "Optimal":
@@ -299,17 +299,23 @@ def build_and_solve_model(
 
     # --- 1. EXTRACT DATA & CREATE SETS ---
     
-    # Get sets from the scenario data
+    # Get unique sets
     I_nurses = nurses_list  
     J_days = sorted(scenarios_df['day'].unique(), key=int)
     K_shifts = scenarios_df['shift'].unique()
     W_scenarios = scenarios_df['scenario'].unique()
+
+    # Validate we have data to work with (defensive programming)
+    if len(W_scenarios) == 0:
+        raise ValueError("No scenarios provided in scenarios_df - cannot build model")
+    if len(I_nurses) == 0:
+        raise ValueError("No nurses provided in nurses_list - cannot build model")
     
-    # Create a fast lookup dictionary for R_jk_omega (Demand)
-    # This is the R_jk^ω from the paper
+    # Get demand as a dictionary: (day, shift, scenario) -> demand
     R_demand = scenarios_df.set_index(['day', 'shift', 'scenario'])['demand'].to_dict()
 
     # Get probabilities (assume all scenarios are equally likely for this prototype)
+    # Now guaranteed safe because len(W_scenarios) > 0
     scenario_probability = {w: 1.0 / len(W_scenarios) for w in W_scenarios}
     
     # Extract model parameters from the dictionary
@@ -324,7 +330,7 @@ def build_and_solve_model(
     
     # CVaR parameters (if used)
     sigma = model_params.get('sigma', 0.95) # Default 0.95
-    mu = model_params.get('mu', 5.0)       # Default 5.0
+    mu = model_params.get('mu', 50.0)      # Default 50.0 (increased from 5.0 based on sensitivity testing)
     
     # NEW ADVANCED CONSTRAINTS PARAMETERS
     # Constraint 9: Minimum complete weekends off
@@ -2357,7 +2363,7 @@ def get_default_params():
         'n2': 5,          # Max night shifts
         'n3': 10,         # Min regular shifts
         'sigma': 0.95,    # CVaR confidence level
-        'mu': 5.0,        # Max acceptable shortage
+        'mu': 50.0,       # Max acceptable shortage (CVaR threshold)
         
         # Advanced constraints (NEW for university project)
         'n4': 0,          # Min complete weekends off (0 = disabled)
