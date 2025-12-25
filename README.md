@@ -1,8 +1,8 @@
 # Nurse Scheduling System (NSS)
 
-**Two-Stage Stochastic Nurse Scheduling with CVaR Risk Control**
+**Two-Stage Stochastic Nurse Scheduling with CVaR Risk Control and Fatigue Modeling**
 
-A research-grade implementation of the nurse scheduling model from He et al. (2019), featuring two-stage stochastic programming with Conditional Value-at-Risk (CVaR) constraints for robust decision-making under demand uncertainty.
+A research-grade implementation of He et al. (2019) with significant enhancements: configurable overtime logic, piecewise-linear fatigue modeling, and comprehensive parameter tuning experiments.
 
 [![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
@@ -13,33 +13,36 @@ A research-grade implementation of the nurse scheduling model from He et al. (20
 ### Mathematical Foundation
 - **Two-Stage Stochastic Programming** - Optimizes under demand uncertainty with recourse decisions
 - **CVaR Risk Management** - Controls worst-case shortage risk via Conditional Value-at-Risk
-- **Paper-Faithful Implementation** - Exact reproduction of He et al. (2019) with enhancements
-- **18+ Constraints** - Complete implementation of all constraints from the research paper
-- **Overtime Enforcement** - Fixed paper's oversight with optional Constraint 8b
+- **Configurable Overtime Logic** - Toggle between paper's formulation and NSS-enhanced strict rules
+- **Piecewise-Linear Fatigue Modeling** - SOS2-based exponential fatigue approximation (Jaber et al., 2013)
+- **18+ Constraints** - Complete implementation with optional advanced constraints
+
+### Research Contributions
+- **Overtime Paradox Analysis** - Identified and resolved mathematical gap in paper's overtime formulation
+- **Dual Model Variants** - Paper-faithful mode vs. NSS-enhanced mode with strict overtime enforcement
+- **Parameter Tuning Study** - 2,430-run factorial experiment on fatigue modeling sensitivity
+- **Solver Configuration Framework** - Auto-detection and optimization for Gurobi/HiGHS/CBC
 
 ### User Experience
-- **Web Interface** - Professional Streamlit dashboard (no coding required)
+- **Web Interface** - Professional Streamlit dashboard (no coding  required)
 - **Real-Time Optimization** - 5-60 second solve times with Gurobi/HiGHS
 - **Interactive Visualizations** - Schedule heatmaps, cost breakdowns, scenario analysis
-- **Multiple Solvers** - Auto-detects Gurobi, HiGHS, or CBC
-- **Export Options** - CSV, Excel, JSON formats
-
-### Advanced Capabilities
-- **Scenario-Based Optimization** - Handles multiple demand scenarios with probabilities
-- **Recourse Actions** - Emergency staff additions and shift cancellations
-- **Advanced Constraints** - Weekend-off requirements, night shift rest, shift quotas
 - **Comprehensive Validation** - Input validation, feasibility checking, result verification
+- **Export Options** - CSV, Excel, JSON formats
 
 ## Recent Updates (December 2025)
 
-### Major Fixes & Enhancements
-- **Constraint 8b Added** - Fixed paper's overtime bug (shifts beyond n3 now properly use overtime)
-- **Baseline Coverage Removed** - Corrected misunderstanding of paper's model structure
-- **Import Path Fixed** - Resolved `scripts.solver_config` → `solver_config` error
-- **Comprehensive Documentation** - 10 detailed guides covering all aspects
-- **Repository Cleanup** - Removed 35+ duplicate/obsolete files (60% reduction)
-- **Paper Comparison** - Detailed line-by-line analysis vs original paper (DETAILED_COMPARISON.md)
+### Major Enhancements
+- **Configurable Overtime Logic** - Added UI toggle to switch between paper mode (overtime paradox) and NSS mode (strict enforcement)
+- **Fatigue Modeling Experiments** - Completed 2,430-run parameter tuning study testing λ, safety weight, and fatigue thresholds
+- **Experimental Results** - Generated sensitivity analysis showing threshold=0.6 causes consistent solver timeouts
+- **Enhanced Validation** - Added capacity feasibility checks with detailed warnings
+- **Documentation Expansion** - Created Mathematical_Model.tex with line-by-line code correspondence
 
+### Bug Fixes & Refinements
+- **Import Path Fixed** - Resolved `scripts.solver_config` → `solver_config` error
+- **Baseline Demand Redefined** - Changed from arbitrary scenario to expected demand (statistical mean)
+- **Repository Cleanup** - Organized into docs/, scripts/, tests/, experiments/, logs/, archive/ structure
 
 ## Quick Start
 
@@ -64,20 +67,10 @@ streamlit run app.py
 
 Opens at **http://localhost:8501**
 
-### 3. Test Overtime Functionality
-```bash
-# Use pre-configured test files
-# Upload: data/overtime_test_nurses.csv (10 nurses)
-# Upload: data/overtime_test_scenarios.csv (3 scenarios, 14 days)
-
-# Critical settings:
-# - Set n3 = 5 (Min regular shifts)
-# - Set n1 = 14 (Max total shifts)
-# - Set q_plus = 300 (Emergency cost)
-# - [x] CHECK "Enforce Max Regular Shifts (Force Overtime)"
-
-# Expected result: 50 regular + 40-50 overtime shifts
-```
+### 3. Configure Overtime Behavior
+In the sidebar under "Work Rules > Basic Shift Constraints":
+- **Unchecked** (Default): Paper Mode - demonstrates "Overtime Paradox" (0 overtime usage)
+- **Checked**: NSS Mode - enforces strict overtime rules with weekly caps
 
 **Full Guide:** See [OVERTIME_TEST_GUIDE.md](OVERTIME_TEST_GUIDE.md) for detailed testing instructions.
 
@@ -86,48 +79,68 @@ Opens at **http://localhost:8501**
 ```
 NSS/
 ├── Core Application
-│   ├── app.py                      # Streamlit web interface (2233 lines)
-│   ├── model.py                    # Optimization model (1916 lines)
+│   ├── app.py                      # Streamlit web interface (2,364 lines)
+│   ├── model.py                    # Optimization model (2,376 lines, 11 functions)
 │   └── solver_config.py            # Solver detection & configuration
 │
-├── Data & Tests
-│   ├── data/
-│   │   ├── sample_nurses.csv              # Basic test (10 nurses)
-│   │   ├── sample_scenarios.csv           # Basic scenarios
-│   │   ├── overtime_test_nurses.csv       # Overtime test (10 nurses)
-│   │   ├── overtime_test_scenarios.csv    # Overtime scenarios
-│   │   ├── 40_nurses_30days_*.csv (2)     # Large-scale test
-│   │   └── cvar_*.csv (2)                 # CVaR risk test
+├── Experiments & Results
+│   ├── experiments/                # Parameter tuning experiments
+│   │   ├── parameter_tuning.py         # Factorial design (2,430 runs)
+│   │   ├── statistical_validation.py   # ANOVA and sensitivity analysis
+│   │   ├── analyze_tuning_results.py   # Results visualization
+│   │   ├── visualize_fatigue.py        # Fatigue model visualization
+│   │   └── retry_failed.py             # Retry logic for timeouts
 │   │
-│   └── scripts/
-│       ├── VALIDATE_OVERTIME.py           # Overtime test suite (4 tests)
-│       ├── COMPLETE_TEST_INSTANCE.py      # Full example with all params
-│       ├── OVERTIME_EXAMPLE.py            # Reference implementation
-│       ├── run_test_with_csv.py           # CSV test utility
-│       └── test_model_validation.py       # Validation tests
+│   ├── results/                    # Experiment outputs
+│   │   ├── parameter_tuning_results.csv    # 2,430 experimental runs
+│   │   ├── optimal_configurations.csv      # Top performers
+│   │   ├── sensitivity_analysis.csv        # Parameter sensitivity
+│   │   └── figures/                        # Visualization outputs
+│   │
+│   └── logs/                       # Execution logs
+│       └── parameter_tuning_60s.log        # 2.2MB detailed log
+│
+├── Data & Tests
+│   ├── data/                       # Sample datasets and test cases
+│   │   ├── sample_nurses.csv           # Basic test (10 nurses)
+│   │   ├── sample_scenarios.csv        # Basic scenarios
+│   │   ├── overtime_test_*.csv (2)     # Overtime validation
+│   │   ├── 40_nurses_30days_*.csv (2)  # Large-scale test
+│   │   └── cvar_*.csv (2)              # CVaR risk test
+│   │
+│   ├── scripts/                    # Standalone analysis scripts
+│   │   ├── VALIDATE_OVERTIME.py        # Overtime test suite
+│   │   ├── COMPLETE_TEST_INSTANCE.py   # Full example
+│   │   └── model_2.py                  # Paper-pure variant (archived)
+│   │
+│   └── tests/                      # Unit tests
+│       └── test_overtime_revert.py     # Overtime paradox verification
 │
 ├── Documentation
-│   ├── USER_GUIDE.md                  # Complete user guide
-│   ├── TECHNICAL_GUIDE.md             # Developer documentation
-│   ├── PARAMETER_GUIDE.md             # All parameters explained
-│   ├── CONSTRAINTS_GUIDE.md           # Constraint reference
-│   ├── ADVANCED_CONSTRAINTS.md        # Advanced features
-│   ├── QUICK_REFERENCE.md             # Quick start
-│   ├── PAPER_ANALYSIS.md              # Paper vs implementation
-│   ├── ERROR_LOG.md                   # Overtime issue analysis
-│   ├── DETAILED_COMPARISON.md         # Line-by-line comparison
-│   └── He et al. (2019).pdf           # Original research paper
+│   ├── Mathematical_Model.tex      # Complete mathematical formulation (47KB)
+│   ├── docs/
+│   │   ├── CVaR_Explained.tex          # CVaR risk tutorial
+│   │   ├── DETAILED_COMPARISON.md      # Line-by-line vs paper (33KB)
+│   │   ├── PAPER_ANALYSIS.md           # Overtime paradox analysis
+│   │   ├── USER_GUIDE.md               # Complete user guide
+│   │   ├── TECHNICAL_GUIDE.md          # Developer documentation
+│   │   ├── PARAMETER_GUIDE.md          # All parameters explained
+│   │   ├── CONSTRAINTS_GUIDE.md        # Constraint reference
+│   │   └── He et al. (2019).pdf        # Original research paper
+│   │
+│   └── archive/                    # Historical documentation
+│       ├── docs/                       # Superseded reports
+│       └── results/                    # Previous experiment data
 │
 ├── Project Files
-│   ├── README.md                      # This file
-│   ├── OVERTIME_TEST_GUIDE.md         # Testing guide
-│   ├── requirements.txt               # Python dependencies
-│   └── LICENSE                        # MIT License
+│   ├── README.md                   # This file
+│   ├── requirements.txt            # Python dependencies
+│   └── LICENSE                     # MIT License
 │
 └── Support Files
-    ├── expected_outputs/              # Test expectations (JSON)
-    ├── notebooks/                     # Jupyter analysis (optional)
-    └── loading.gif                    # UI loading animation
+    ├── notebooks/                  # Jupyter analysis notebooks
+    ├── Output/                     # User-generated output directory
+    └── loading.gif                 # UI loading animation
 ```
 
 ## Solver Configuration
@@ -161,7 +174,7 @@ The system auto-detects and uses the best available solver.
 **Stage 1 (Here-and-Now Decisions):**
 - Create baseline nurse schedule **before** knowing actual demand
 - Assign regular shifts (`sr_ijk`) and overtime shifts (`so_ijk`)
-- Minimize: `c1·sr + c2·so + penalties`
+- Minimize: `c1·sr + c2·so + fatigue_penalty + soft_penalties`
 
 **Stage 2 (Recourse Decisions):**
 - Adjust schedule **after** demand is realized in each scenario
@@ -185,6 +198,16 @@ CVaR_σ ≤ μ
 
 **Example:** "In the worst 5% of scenarios, shortage ≤ 5 shifts"
 
+### Fatigue Modeling (Optional)
+
+Piecewise-linear approximation of exponential fatigue function:
+```
+F(t) = 1 - e^(-λt)
+```
+- Implemented using SOS2 constraints for exact non-linear modeling
+- 8-segment PWL: 0.398% average error, 0.713% max error
+- Based on Jaber et al. (2013) learning-forgetting framework
+
 ### Complete Formulation
 
 **Decision Variables:**
@@ -193,22 +216,26 @@ CVaR_σ ≤ μ
 - `α_jk^ω` ≥ 0: Emergency staff added (scenario ω)
 - `β_jk^ω` ≥ 0: Shifts cancelled (scenario ω)
 - `SR_i, SO_i` ∈ {0,1}: Indicator variables
+- `F_ij` ∈ [0,1]: Fatigue level for nurse i on day j (continuous)
 
-**Constraints (18 total):**
+**Constraints (22 total):**
 1. One shift per day: `Σₖ(sr + so) ≤ 1`
 2-5. Shift type quotas (optional)
 6. Max total shifts: `Σⱼₖ(sr + so) ≤ n1`
 7. Max night shifts: `Σⱼ(sr_N + so_N) ≤ n2`
-8. Min regular shifts: `Σⱼₖ sr ≥ n3·SR` (if working)
-8b. **Max regular shifts** (optional): `Σⱼₖ sr ≤ n3·SR` **Fixes overtime**
+7.5. **Weekly overtime cap** (NSS mode only): `Σⱼₖ so ≤ 1` per week
+8. **Regular shift quota** (configurable):
+   - Paper mode: `Σⱼₖ sr ≥ n3·SR` (minimum)
+   - NSS mode: `Σⱼₖ sr == n3·SR` (strict)
 9. Min weekends off (optional)
 10-13. Night rest requirements (optional)
 14-15. Soft penalties (stand-alone shifts, unwanted patterns)
+F1-F6. Fatigue modeling constraints (optional, SOS2-based)
 16. **Demand fulfillment** (key): `Σᵢ(sr + so) + α - β ≥ R^ω`
 17-18. Recourse bounds (optional)
 19-22. CVaR constraints (SDM-CVaR only)
 
-**See:** [DETAILED_COMPARISON.md](docs/DETAILED_COMPARISON.md) for full mathematical formulation and line-by-line comparison with paper.
+**See:** [Mathematical_Model.tex](Mathematical_Model.tex) for complete LaTeX formulation with code line references.
 
 ## Model Parameters
 
@@ -230,12 +257,20 @@ CVaR_σ ≤ μ
 | `n3` | n₃ | Min regular shifts (if working) | 10 | 5-20 |
 | `n4` | n₄ | Min complete weekends off | 0 | 0-4 |
 
-### Advanced Constraints (Optional)
-- **`enforce_max_regular`** - Force overtime usage (Constraint 8b)
-- **`shift_quotas`** - Min/max per shift type (E, D, L, N)
-- **`night_rest_enabled`** - Night shift rest requirements
-- **`max_emergency_staff`** - Cap on emergency staff per shift
-- **`start_date`** - For weekend detection (YYYY-MM-DD)
+### Fatigue Parameters (Optional)
+| Parameter | Symbol | Description | Default | Range |
+|-----------|--------|-------------|---------|-------|
+| `fatigue_lambda` | λ | Fatigue accumulation rate | 0.03 | 0.01-0.10 |
+| `patient_safety_weight` | $ | Cost per unit fatigue | $50 | $0-$200 |
+| `max_fatigue_threshold` | T | Maximum allowed fatigue | 0.70 | 0.50-0.90 |
+| `shift_duration` | h | Hours per shift | 12 | 8-16 |
+
+**Caution:** Threshold below 0.65 may cause solver timeouts (see experiment results).
+
+### Overtime Configuration (New!)
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `allow_overtime_paradox` | If True: Paper mode (min regular, no OT caps). If False: NSS mode (strict regular quota + weekly OT cap) | True (Paper) |
 
 ### CVaR Parameters (SDM-CVaR Model)
 | Parameter | Symbol | Description | Default | Range |
@@ -261,6 +296,45 @@ CVaR_σ ≤ μ
 
 **HiGHS Solver:** ~10× slower than Gurobi but still practical for medium problems.
 
+## Experimental Research
+
+### Parameter Tuning Study (Dec 2025)
+
+**Design:** 3×3×3×3 factorial experiment (81 configurations × 30 replications = 2,430 runs)
+
+**Factors Tested:**
+- Fatigue λ: {0.02, 0.03, 0.04}
+- Safety weight: {$30, $50, $80}
+- Max threshold: {0.60, 0.70, 0.80}
+- Demand level: {Low, Medium, High}
+
+**Key Findings:**
+1. **Threshold Sensitivity**: T=0.60 causes 100% solver timeouts (60s limit)
+2. **Optimal Configuration**: λ=0.03, weight=$50, T=0.70 for Medium demand
+3. **Solver Performance**: Higher thresholds dramatically improve convergence
+4. **Cost Trade-offs**: Higher safety weights reduce fatigue but increase total cost 15-25%
+
+**Results:** See `results/parameter_tuning_results.csv` (538KB, 2,430 rows)
+
+### Analysis Scripts
+
+```bash
+# Run parameter tuning (test mode: 9 configurations)
+python experiments/parameter_tuning.py --mode test
+
+# Full experiment (2,430 runs, ~40 hours)
+python experiments/parameter_tuning.py --mode full --yes
+
+# Analyze results
+python experiments/analyze_tuning_results.py
+
+# Statistical validation (ANOVA)
+python experiments/statistical_validation.py
+
+# Visualize fatigue curves
+python experiments/visualize_fatigue.py
+```
+
 ## Testing & Validation
 
 ### Test Suite
@@ -279,10 +353,11 @@ python scripts/run_test_with_csv.py
 
 ### Validation Results
 - **All core constraints validated** (Constraints 1-18)  
-- **Overtime functionality verified** (with enforce_max_regular=True)  
+- **Overtime functionality verified** (Paper mode vs NSS mode)  
 - **CVaR risk management tested** (SDM-CVaR model)  
-- **Paper comparison complete** (see DETAILED_COMPARISON.md)  
-- **Import errors resolved** (solver_config path fixed)
+- **Fatigue modeling validated** (PWL approximation accuracy: 0.398% avg error)
+- **Parameter tuning complete** (2,430 experimental runs)
+- **Paper comparison complete** (see DETAILED_COMPARISON.md)
 
 ## Troubleshooting
 
@@ -296,10 +371,10 @@ python scripts/run_test_with_csv.py
 ```
 
 **Overtime shifts not being generated**
-- Enable "Enforce max regular shifts (Constraint 8b)" checkbox in UI
-- Set `n3` (min regular) = `n1` (max total) to force overtime
-- Example: `n1=15, n3=15` → nurses must work overtime to meet demand
-- See [OVERTIME_TEST_GUIDE.md](OVERTIME_TEST_GUIDE.md) for complete instructions
+- Enable "Enable NSS Strict Overtime Rules" checkbox in UI (sidebar under "Work Rules")
+- This forces strict regular quota (Constraint 8 as equality)
+- Without this, model exhibits "Overtime Paradox" (0 overtime due to cost preference)
+- See [PAPER_ANALYSIS.md](docs/PAPER_ANALYSIS.md) for mathematical explanation
 
 **Solver not found / No solver available**
 ```bash
@@ -312,49 +387,51 @@ pip install highspy
 # 3. Run: grbgetkey <your-license-key>
 ```
 
+**Solver timeout with fatigue modeling**
+- Increase `max_fatigue_threshold` above 0.65 (lower thresholds are very hard to satisfy)
+- Reduce problem size (fewer nurses, days, or scenarios)
+- Use Gurobi instead of HiGHS (10× faster)
+- Set longer time limit in parameters
+
 **Infeasible solution / No solution found**
-- Reduce demand in `sample_scenarios.csv`
+- Check capacity warnings in console output
 - Increase available nurses in `sample_nurses.csv`
 - Relax hard constraints (decrease `n1`, `n2`, increase `n3`)
-- Check weekend constraints don't over-constrain the problem
+- Disable fatigue modeling if threshold is too restrictive
 
 **Very slow solving (>10 minutes)**
 - Reduce problem size (fewer scenarios, shorter horizon)
 - Use Gurobi instead of HiGHS (10× faster)
 - Disable soft constraints (c3=0, c4=0)
+- Disable fatigue modeling (`patient_safety_enabled=False`)
 - See [PERFORMANCE_ANALYSIS.md](docs/PERFORMANCE_ANALYSIS.md)
-
-**Memory errors (large problems)**
-```bash
-# Reduce scenario count or planning horizon
-# For 50+ nurses over 30 days:
-# - Limit to 10 scenarios (instead of 20)
-# - Use time limit: set max_solve_time=300 in solver_config.py
-```
 
 ## Documentation
 
 | Document | Description | Status |
 |----------|-------------|--------|
-| [DETAILED_COMPARISON.md](DETAILED_COMPARISON.md) | Line-by-line comparison with He et al. (2019) paper | Complete (60KB) |
-| [OVERTIME_TEST_GUIDE.md](OVERTIME_TEST_GUIDE.md) | How to test overtime functionality in Streamlit | Latest |
-| [TUTORIAL.md](docs/TUTORIAL.md) | Step-by-step walkthrough for beginners | Available |
-| [CONSTRAINTS_GUIDE.md](docs/CONSTRAINTS_GUIDE.md) | Complete constraint reference (18+ constraints) | Available |
+| [Mathematical_Model.tex](Mathematical_Model.tex) | Complete mathematical formulation with code line references | Complete (47KB) |
+| [CVaR_Explained.tex](docs/CVaR_Explained.tex) | CVaR risk management tutorial with examples | Complete |
+| [DETAILED_COMPARISON.md](docs/DETAILED_COMPARISON.md) | Line-by-line comparison with He et al. (2019) paper | Complete (33KB) |
+| [PAPER_ANALYSIS.md](docs/PAPER_ANALYSIS.md) | Overtime paradox analysis and resolution | Complete |
+| [PARAMETER_GUIDE.md](docs/PARAMETER_GUIDE.md) | All parameters explained with examples | Available |
+| [CONSTRAINTS_GUIDE.md](docs/CONSTRAINTS_GUIDE.md) | Complete constraint reference (22 constraints) | Available |
 | [MODEL_STRUCTURE.md](docs/MODEL_STRUCTURE.md) | Code architecture and design patterns | Available |
 | [PERFORMANCE_ANALYSIS.md](docs/PERFORMANCE_ANALYSIS.md) | Solver benchmarks and optimization tips | Available |
-| [ADVANCED_CONSTRAINTS.md](docs/ADVANCED_CONSTRAINTS.md) | Optional constraint details | Available |
 
 ## Technical Stack
 
 **Core Dependencies:**
 - `gurobipy>=11.0.3` or `highspy>=1.7.0` - MIP solver
-- `pyomo>=6.8.2` - Mathematical modeling language
+- `pulp>=2.9.0` - Mathematical modeling language
 - `streamlit>=1.40.2` - Web interface
 - `pandas>=2.2.3` - Data handling
 - `numpy>=2.2.1` - Numerical operations
+- `matplotlib>=3.9.0` - Visualization (for experiments)
+- `seaborn>=0.13.0` - Statistical graphics
 
 **Development:**
-- Python 3.11+ (tested on 3.11.5)
+- Python 3.11+ (tested on 3.11.5 and 3.13)
 - macOS/Linux/Windows compatible
 - No C++ compilation required (pure Python)
 
@@ -369,31 +446,38 @@ pip install highspy
 
 **Based on:** He, F., Qu, R., & Investigate, S. (2019). A two-stage stochastic mixed-integer program modelling and hybrid solution approach to re-rostering problems under uncertainty. *European Journal of Operational Research*.
 
-**Implementation:** This codebase is a complete implementation of the SDM-CVaR model from the paper, with 95% exact match to mathematical formulation (see DETAILED_COMPARISON.md for detailed analysis).
+**Additional References:**
+- Jaber, M. Y., Givi, Z. S., & Neumann, W. P. (2013). Incorporating human fatigue and recovery into the learning–forgetting process. *Applied Mathematical Modelling*, 37(12-13), 7287-7299.
+- Rockafellar, R. T., & Uryasev, S. (2000). Optimization of conditional value-at-risk. *Journal of Risk*, 2, 21-42.
 
-**Key Extensions:**
-- Constraint 8b (overtime enforcement) - optional, not in paper
-- Streamlit web interface - for ease of use
-- Multiple solver support - Gurobi/HiGHS/CBC
-- CSV-based data input - practical deployment
-- Comprehensive validation suite - 4 automated tests
+**Implementation:** This codebase is a complete implementation of the SDM-CVaR model with significant enhancements:
+
+**Key Extensions & Contributions:**
+1. **Overtime Paradox Resolution** - Identified and resolved gap in paper's formulation
+2. **Configurable Overtime** - Dual mode system (Paper vs NSS)
+3. **Fatigue Modeling** - SOS2-based PWL approximation (not in original paper)
+4. **Parameter Tuning Study** - 2,430-run experimental validation
+5. **Comprehensive Documentation** - Complete mathematical correspondence
+6. **Validation Framework** - Automated feasibility checking and warnings
 
 ## Project Status
 
-**Research-Grade Implementation** (December 2024)
-- Core model: 100% complete (all 18 constraints from paper)
+**Research-Grade Implementation** (December 2024-2025)
+- Core model: 100% complete (22 constraints including fatigue)
 - Validation: 4/4 tests passing
-- Documentation: 10 comprehensive guides
-- Recent fixes: Import path, overtime, repository cleanup
-- Test coverage: Overtime, CVaR, emergency staff, soft constraints
+- Documentation: 10+ comprehensive guides
+- Experiments: 2,430-run parameter tuning complete
+- Analysis: Overtime paradox identified and resolved
+- Test coverage: Overtime, CVaR, fatigue, emergency staff, soft constraints
 
-**Latest Updates (Dec 2024):**
-- Fixed import path (scripts.solver_config → solver_config)
-- Repository cleanup (60% file reduction, 35+ files removed)
-- Added DETAILED_COMPARISON.md (line-by-line vs paper)
-- Created OVERTIME_TEST_GUIDE.md (complete testing instructions)
-- Validated all constraints against paper
-- Updated README with clean structure
+**Latest Updates (Dec 2025):**
+- Completed parameter tuning study (2,430 experimental runs)
+- Added configurable overtime logic with UI toggle
+- Enhanced fatigue modeling with SOS2 constraints
+- Created Mathematical_Model.tex with code correspondence
+- Generated sensitivity analysis and optimal configurations
+- Updated README with experiment results
+- Organized project into clear directory structure
 
 ## License
 
@@ -402,6 +486,7 @@ MIT License - See [LICENSE](LICENSE) for details.
 ## Acknowledgments
 
 - He et al. (2019) for the original SDM-CVaR model
+- Jaber et al. (2013) for the fatigue modeling framework
 - Gurobi Optimization for academic license
 - HiGHS team for open-source solver
 
@@ -410,10 +495,20 @@ MIT License - See [LICENSE](LICENSE) for details.
 **Citation:**
 ```bibtex
 @article{he2019two,
-  title={A two-stage stochastic mixed-integer program modelling and hybrid solution approach to re-rostering problems under uncertainty},
+  title={A two-stage stochastic mixed-integer program modelling and hybrid solution approach to re-rostering problems under patient demand uncertainty},
   author={He, Fang and Qu, Rong},
   journal={European Journal of Operational Research},
   year={2019}
+}
+
+@article{jaber2013incorporating,
+  title={Incorporating human fatigue and recovery into the learning–forgetting process},
+  author={Jaber, Mohamad Y and Givi, Zaher S and Neumann, W Patrick},
+  journal={Applied Mathematical Modelling},
+  volume={37},
+  number={12-13},
+  pages={7287--7299},
+  year={2013}
 }
 ```
 
