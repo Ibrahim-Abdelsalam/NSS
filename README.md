@@ -1,6 +1,6 @@
-# Nurse Scheduling System (NSS)
+# FROST-NSS: Fatigue-aware Risk Optimization for Stochastic Task allocation
 
-**Two-Stage Stochastic Nurse Scheduling with CVaR Risk Control and Fatigue Modeling**
+**Nurse Scheduling System with CVaR Risk Control and Fatigue Modeling**
 
 A research-grade implementation of He et al. (2019) with significant enhancements: configurable overtime logic, piecewise-linear fatigue modeling, and comprehensive parameter tuning experiments.
 
