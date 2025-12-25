@@ -15,6 +15,14 @@ A research-grade implementation of He et al. (2019) with significant enhancement
 
 </div>
 
+<br>
+
+<div align="center">
+  <img src="Menu.png" alt="Application Menu Interface" width="100%">
+</div>
+
+<br>
+
 ## Key Features
 
 ### Mathematical Foundation
