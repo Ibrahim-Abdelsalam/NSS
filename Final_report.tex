@@ -183,19 +183,74 @@ endeavor.
 
 \subsection{Problem Formulation}
 
-This study addresses the integrated nurse staffing and scheduling problem under patient demand uncertainty, extending the foundational work of He, Chaussalet, and Qu (2019) [16]. The problem is formulated as a two-stage stochastic integer program with Conditional Value-at-Risk (CVaR) constraints. In the first stage, scheduling decisions are made before the realization of patient demand, establishing a baseline nurse roster. In the second stage, recourse actions are taken once the actual demand is observed, allowing for adjustments through emergency staff additions or shift cancellations.
+This proof-of-concept study addresses the integrated nurse staffing and scheduling problem under patient demand uncertainty, extending the foundational work of He, Chaussalet, and Qu (2019) [16]. The problem is formulated as a two-stage stochastic integer program with Conditional Value-at-Risk (CVaR) constraints. In the first stage, scheduling decisions are made before the realization of patient demand, establishing a baseline nurse roster. In the second stage, recourse actions are taken once the actual demand is observed, allowing for adjustments through emergency staff additions or shift cancellations. This prototype implementation demonstrates the feasibility of integrating risk-aware optimization with practical scheduling constraints.
 
 The planning horizon spans multiple days with multiple shift types per day, namely Early (E), Day (D), Late (L), and Night (N) shifts. Patient demand for nursing services is inherently uncertain and is modeled through a discrete set of scenarios, each representing a possible realization of demand across all days and shifts. The probability of each scenario is assumed to be equal, reflecting the epistemic uncertainty in demand forecasting.
 
 \subsection{Mathematical Model Formulation}
 
-Let $I$ denote the set of nurses indexed by $i$, $J$ denote the set of days in the planning period indexed by $j$, $K$ denote the set of shift types indexed by $k$, and $\Omega$ denote the set of demand scenarios indexed by $\omega$. Additionally, let $W$ denote the set of weeks in the planning period and $K'$ denote the set of unwanted consecutive shift patterns, specifically the pairs $(D,E)$, $(L,E)$, $(L,D)$, and $(E,N)$ which represent shift sequences with insufficient rest time between consecutive shifts.
+\subsubsection{Sets and Indices:}
+\begin{align*}
+I &= \text{Set of nurses, indexed by } i \\
+J &= \text{Set of days in planning period, indexed by } j \\
+K &= \text{Set of shift types: } \{E, D, L, N\}, \text{ indexed by } k \\
+\Omega &= \text{Set of demand scenarios, indexed by } \omega \\
+W &= \text{Set of weeks in planning period} \\
+K' &= \text{Unwanted shift patterns: } \{(D,E), (L,E), (L,D), (E,N)\}
+\end{align*}
 
-The first-stage decision variables include $sr_{ijk}$, a binary variable equal to one if nurse $i$ works a regular shift of type $k$ on day $j$, and $so_{ijk}$, a binary variable equal to one if nurse $i$ works an overtime shift of type $k$ on day $j$. Binary indicator variables $SR_i$ and $SO_i$ denote whether nurse $i$ works any regular or overtime shifts, respectively, during the planning period. Deviation variables $dev1_{ij}$ and $dev2_{ijk}$ capture violations of soft constraints related to stand-alone working days and unwanted shift patterns, respectively.
+\subsubsection{Parameters:}
+\begin{align*}
+c_1 &= \text{Regular shift cost per shift} \\
+c_2 &= \text{Overtime shift cost per shift} \\
+c_3 &= \text{Penalty for stand-alone shift violations} \\
+c_4 &= \text{Penalty for unwanted shift pattern violations} \\
+c_{safety} &= \text{Patient safety weight (fatigue penalty)} \\
+q^+ &= \text{Emergency staff addition cost per shift} \\
+q^- &= \text{Shift cancellation cost per shift} \\
+n_1 &= \text{Maximum total shifts per nurse} \\
+n_2 &= \text{Maximum night shifts per nurse} \\
+n_3 &= \text{Minimum regular shifts per nurse} \\
+n_4 &= \text{Minimum complete weekends off per nurse} \\
+R_{jk}^{\omega} &= \text{Demand for shift } k \text{ on day } j \text{ in scenario } \omega \\
+p^{\omega} &= \text{Probability of scenario } \omega \\
+\lambda &= \text{Fatigue accumulation rate} \\
+F_{max} &= \text{Maximum fatigue threshold} \\
+\sigma &= \text{CVaR confidence level} \\
+\mu &= \text{Maximum acceptable shortage threshold}
+\end{align*}
 
-The second-stage recourse variables include $\alpha_{jk}^{\omega}$, the number of emergency staff additions for shift $k$ on day $j$ under scenario $\omega$, and $\beta_{jk}^{\omega}$, the number of shift cancellations for shift $k$ on day $j$ under scenario $\omega$. For the CVaR risk management, the model employs $\xi$ as the Value-at-Risk threshold and $z^{\omega}$ as the excess loss variable for each scenario $\omega$.
+\subsubsection{First-Stage Decision Variables:}
+\begin{align*}
+sr_{ijk} &\in \{0,1\} : \text{1 if nurse } i \text{ works regular shift k} \\
+&\quad \text{ on day } j \\
+so_{ijk} &\in \{0,1\} : \text{1 if nurse } i \text{ works overtime shift k} \\
+&\quad  \text{ on day } j \\
+SR_i &\in \{0,1\} : \text{1 if nurse } i \text{works any regular shifts} \\
+SO_i &\in \{0,1\} : \text{1 if nurse } i \text{works any overtime shifts} \\
+dev1_{ij} &\in \mathbb{Z}_+ : \text{Stand-alone shift deviation} \\
+dev2_{ijk} &\in \mathbb{Z}_+ : \text{Unwanted pattern deviation} \\
+F_{ij} &\in [0, F_{max}] : \text{Cumulative fatigue} \\
+&\quad \text{of nurse } i \text{ on day } j \\
+T_{ij} &\in \mathbb{R}_+ : \text{Cumulative work hours} \\
+&\quad \text{of nurse } i \text{ up to day } j
+\end{align*}
 
-The objective function minimizes the total expected cost:
+\subsubsection{Second-Stage Decision Variables:}
+\begin{align*}
+\alpha_{jk}^{\omega} &\in \mathbb{Z}_+ : \text{Emergency staff added} \\
+&\quad \text{for shift } k, \text{ day } j, \text{ scenario } \omega \\
+\beta_{jk}^{\omega} &\in \mathbb{Z}_+ : \text{Shifts cancelled} \\
+&\quad \text{for shift } k, \text{ day } j, \text{ scenario } \omega
+\end{align*}
+
+\subsubsection{CVaR Variables:}
+\begin{align*}
+\xi &\in \mathbb{R} : \text{Value-at-Risk (VaR) threshold} \\
+z^{\omega} &\in \mathbb{R}_+ : \text{Excess loss in scenario } \omega \text{ beyond VaR}
+\end{align*}
+
+\subsubsection{Objective Function:} Minimize the total expected cost:
 \begin{equation}
 \begin{aligned}
 \min \quad & c_1 \sum_{i,j,k} sr_{ijk} + c_2 \sum_{i,j,k} so_{ijk} \\
@@ -204,8 +259,6 @@ The objective function minimizes the total expected cost:
 & + \sum_{\omega} p^{\omega} \left( q^+ \sum_{j,k} \alpha_{jk}^{\omega} + q^- \sum_{j,k} \beta_{jk}^{\omega} \right)
 \end{aligned}
 \end{equation}
-
-where $c_1$ and $c_2$ represent the regular and overtime shift costs, $c_3$ and $c_4$ are penalty coefficients for stand-alone shifts and unwanted patterns, $c_{safety}$ is the patient safety weight penalizing cumulative nurse fatigue $F_{ij}$, $q^+$ and $q^-$ are the costs of adding emergency staff and cancelling shifts, and $p^{\omega}$ is the probability of scenario $\omega$.
 
 \subsection{Core Constraints}
 
@@ -234,77 +287,99 @@ The demand fulfillment constraint links the first and second stages:
 \sum_{i} (sr_{ijk} + so_{ijk}) + \alpha_{jk}^{\omega} - \beta_{jk}^{\omega} \geq R_{jk}^{\omega} \quad \forall j, k, \omega
 \end{equation}
 
-where $R_{jk}^{\omega}$ denotes the required number of nurses for shift $k$ on day $j$ under scenario $\omega$.
-
 The CVaR constraint limits the expected loss in worst-case scenarios:
 \begin{equation}
 \xi + \frac{1}{1-\sigma} \sum_{\omega} p^{\omega} z^{\omega} \leq \mu
 \end{equation}
 
-where $\sigma$ is the confidence level and $\mu$ is the maximum acceptable shortage threshold. The excess loss is defined by:
+The excess loss is defined by:
 \begin{equation}
 z^{\omega} \geq \sum_{j,k} \alpha_{jk}^{\omega} - \xi \quad \forall \omega \in \Omega
 \end{equation}
 
-\subsection{Research Contributions}
+\subsection{Project Contributions}
 
-This study extends the base model of He et al. (2019) through several significant contributions.
+This proof-of-concept study extends the base model of He et al. (2019) through seven significant contributions that enhance practical applicability, address identified limitations, and incorporate human factors.
 
-\textbf{Shift Type Quota Constraints.} The first contribution introduces minimum and maximum quota constraints for each shift type, addressing the practical requirement of balanced shift distribution across nurses:
+\subsubsection{Shift Type Quota Constraints} 
+Minimum and maximum quota constraints for each shift type address the practical requirement of balanced shift distribution:
 \begin{equation}
 n_{k,min} \leq \sum_{j} (sr_{ijk} + so_{ijk}) \leq n_{k,max} \quad \forall i \in I
 \end{equation}
 
-This extension ensures that nurses receive equitable distribution of desirable and less desirable shift types, promoting workforce satisfaction and retention.
+This ensures equitable distribution of desirable and less desirable shift types, promoting workforce satisfaction.
 
-\textbf{Minimum Complete Weekends Off.} The second contribution incorporates a constraint ensuring nurses receive a minimum number of complete weekends off during the planning period. Let $WeekendOff_{iw}$ be a binary variable equal to one if nurse $i$ has both Saturday and Sunday off in weekend $w$:
+\subsubsection{Minimum Complete Weekends Off} A constraint ensuring nurses receive complete weekends off during the planning period:
 \begin{equation}
-\sum_{w \in W} WeekendOff_{iw} \geq n_4 \quad \forall i \in I
+\sum_{w \in W} W_{iw} \geq n_4 \quad \forall i \in I
 \end{equation}
 
-\textbf{Night Shift Rest Requirements.} The third contribution addresses the physiological demands of night shift work. Night shifts must occur in consecutive sequences of at least a specified minimum length:
-\begin{equation}
-sr_{i,j+m,N} + so_{i,j+m,N} \geq NightSeqStart_{ij}
-\end{equation}
-for all $m \in \{1, \ldots, min\_consecutive - 1\}$. Following a sequence of night shifts, nurses must have mandatory rest days:
-\begin{equation}
-\sum_{k} (sr_{i,j+m,k} + so_{i,j+m,k}) \leq 1 - NightSeqEnd_{ij}
-\end{equation}
-for all $m \in \{1, \ldots, days\_off\}$.
+where $W_{iw} \in \{0,1\}$ equals one if nurse $i$ has both Saturday and Sunday off in weekend $w$.
 
-\textbf{Exponential Fatigue Modeling.} The most significant contribution is the integration of an exponential fatigue accumulation model based on Jaber, Givi, and Neumann (2013) [22]. The fatigue function is defined as:
+\subsubsection{Night Shift Rest Requirements} Night shifts must occur in consecutive sequences of at least $n_5$ nights to prevent isolated shifts:
+\begin{equation}
+sr_{i,j+m,N} + so_{i,j+m,N} \geq \psi_{ij}
+\end{equation}
+
+for $m = 1, \ldots, n_5 - 1$, where $\psi_{ij}$ indicates a night sequence start. Following a night sequence, $n_6$ mandatory rest days are enforced:
+\begin{equation}
+\sum_{k} (sr_{i,j+m,k} + so_{i,j+m,k}) \leq 1 - \phi_{ij}
+\end{equation}
+
+for $m = 1, \ldots, n_6$, where $\phi_{ij}$ indicates a night sequence end.
+
+\subsubsection{Weekly Overtime Cap} A practical constraint limiting overtime to at most one shift per nurse per week:
+\begin{equation}
+\sum_{j \in J_w} \sum_{k} so_{ijk} \leq 1 \quad \forall i \in I, w \in W
+\end{equation}
+
+where $J_w \subseteq J$ denotes the set of days in week $w$. This prevents excessive overtime accumulation and aligns with hospital labor regulations.
+
+\subsubsection{Overtime Paradox Resolution} The base paper's formulation uses only a minimum constraint for regular shifts ($\geq n_3$), which causes the solver to always prefer cheaper regular shifts over overtime, resulting in zero overtime usage. This implementation introduces a strict equality option:
+\begin{equation}
+\sum_{j,k} sr_{ijk} = n_3 \cdot SR_i \quad \forall i \in I
+\end{equation}
+
+This forces exactly $n_3$ regular shifts per working nurse, requiring any additional shifts to be classified as overtime, thereby enabling realistic overtime cost modeling.
+
+\subsubsection{Exponential Fatigue Modeling} The most significant contribution integrates an exponential fatigue accumulation model based on Jaber et al. (2013). The fatigue function:
 \begin{equation}
 F(T) = 1 - e^{-\lambda T}
 \end{equation}
 
-where $T$ represents cumulative work hours and $\lambda$ is the fatigue accumulation rate parameter. The continuous work hours for each nurse are tracked through:
+is incorporated using piecewise linear (PWL) approximation with SOS2 constraints. Work hours accumulate as:
 \begin{equation}
-T_{ij} = T_{i,j-1} + \sum_{k} (sr_{ijk} + so_{ijk}) \cdot duration
+T_{ij} = T_{i,j-1} + \sum_{k} (sr_{ijk} + so_{ijk}) \cdot d
 \end{equation}
 
-To incorporate this non-linear fatigue function into the mixed-integer programming framework, a piecewise linear (PWL) approximation is employed using the SOS2 (Special Ordered Set of Type 2) technique. The approximation uses weight variables $w_{ijs}$ satisfying:
-\begin{equation}
-\sum_{s \in S} w_{ijs} = 1, \quad T_{ij} = \sum_{s} w_{ijs} \cdot B_s, \quad F_{ij} = \sum_{s} w_{ijs} \cdot V_s
-\end{equation}
+where $d$ is the shift duration in hours.
 
-where $B_s$ are breakpoints and $V_s = 1 - e^{-\lambda B_s}$ are exact fatigue values. The SOS2 constraint ensures that at most two adjacent weight variables are non-zero. Using eight segments, the PWL approximation achieves less than one percent error. To ensure patient safety, a maximum fatigue threshold constraint is imposed:
+The PWL approximation uses weight variables satisfying convexity and adjacency constraints, achieving less than one percent error with eight segments. A maximum fatigue threshold ensures patient safety:
 \begin{equation}
 F_{ij} \leq F_{max} \quad \forall i \in I, j \in J
 \end{equation}
 
-where $F_{max}$ is typically set at 0.70 based on occupational safety literature.
+Additionally, the objective function includes a patient safety cost term $c_{safety} \sum_{i,j} F_{ij}$ that penalizes cumulative fatigue across the planning horizon.
+
+\subsubsection{Operational Recourse Bounds} While the base paper assumes unbounded recourse, practical deployment requires limits on emergency staffing:
+\begin{align}
+\alpha_{jk}^{\omega} &\leq M_{\alpha} \quad \forall j, k, \omega \\
+\beta_{jk}^{\omega} &\leq M_{\beta} \quad \forall j, k, \omega
+\end{align}
+
+where $M_{\alpha}$ and $M_{\beta}$ are the maximum emergency additions and cancellations per shift. These optional constraints accommodate budget limitations, emergency pool sizes, and regulatory compliance requirements.
 
 \section{Implementation}
 
 \subsection{System Architecture}
 
-The proposed nurse scheduling system is implemented as a web-based decision support tool utilizing modern software engineering practices. The system architecture follows a modular design pattern, separating the mathematical optimization core from the user interface and solver management components. This separation enables independent testing and maintenance of each module while facilitating future extensions and modifications.
+The proposed nurse scheduling system is implemented as a proof-of-concept web-based decision support tool utilizing modern software engineering practices. As a prototype, the system demonstrates the practical feasibility of integrating stochastic optimization with fatigue management in a user-friendly interface. The system architecture follows a modular design pattern, separating the mathematical optimization core from the user interface and solver management components. This separation enables independent testing and maintenance of each module while facilitating future extensions and modifications toward production-ready deployment.
 
 \subsection{Software Framework}
 
 The implementation leverages Python as the primary programming language due to its extensive ecosystem for mathematical optimization and data science applications. The optimization model is constructed using PuLP, an open-source linear and mixed-integer programming library that provides a domain-specific language for expressing mathematical programs. PuLP offers solver-agnostic model formulation, allowing the same mathematical model to be solved using different backend solvers without code modification.
 
-The user interface is developed using Streamlit, a Python framework for building interactive web applications suited to data science and machine learning workflows. Streamlit enables rapid prototyping of user interfaces while maintaining the full expressiveness of Python for data manipulation and visualization. Users can configure all model parameters through an intuitive sidebar interface, including cost parameters, work rules, advanced constraints, and solver selection.
+The user interface is developed using Streamlit which enables rapid prototyping of user interfaces while maintaining the full expressiveness of Python for data manipulation and visualization. Users can configure all model parameters through an intuitive sidebar interface, including cost parameters, work rules, advanced constraints, and solver selection.
 
 \subsection{Solver Configuration}
 
@@ -332,10 +407,10 @@ The computational complexity of the model scales with the product of the number 
 For a typical instance with fifty nurses, thirty days, four shifts, twenty scenarios, and eight PWL segments, the model contains approximately twenty-four thousand binary variables and twelve thousand integer variables. Computational experiments demonstrate that the HiGHS solver achieves solution times of twenty to thirty seconds for typical problem instances on standard hardware.
 
 \section{Results}
-This is the placeholder for the Results section. It will present the findings from the optimization model, such as tables comparing schedule performance, computational times, and constraint satisfaction metrics.
+This is the placeholder for the Results section. It will present the proof-of-concept validation findings, including computational experiments on sample instances, solution quality metrics, and demonstration of the model's ability to generate feasible schedules that satisfy all hard constraints while minimizing costs under uncertainty.
 
 \section{Conclusions}
-This is the placeholder for the Conclusions section. It will summarize the main contributions, reiterate the key findings, discuss limitations, and suggest potential avenues for future research.
+This is the placeholder for the Conclusions section. It will summarize the proof-of-concept contributions, validate the feasibility of the proposed framework, discuss current limitations as a prototype system, and outline the roadmap for transitioning from proof-of-concept to production-ready deployment in real healthcare settings.
 
 \end{multicols}
 % ============================================================================
