@@ -395,7 +395,39 @@ The SOS2 constraint implementation uses binary segment indicator variables to en
 
 \subsection{Scenario Generation}
 
-Demand scenarios are generated through a sampling procedure that captures the realistic variability in patient demand. The system supports both user-provided scenario data and automated sample generation for testing purposes. When generating sample data, the system creates scenarios with systematic variation around baseline demand values, incorporating both day-of-week patterns and random fluctuations representative of healthcare demand dynamics. Each scenario contains demand values for all combinations of days and shifts, with probabilities assigned uniformly across scenarios.
+The system provides a dual-mode data interface: users may upload custom historical demand data or utilize the built-in \textbf{Automated Sample Generator} (implemented in the \texttt{generate\_sample\_data()} function). The generator synthesizes realistic test instances using the following methodology:
+
+\subsubsection{Base Demand by Shift Type}
+Base demand for each shift type is calculated as a percentage of the total nurse pool size $|I|$, derived from typical hospital staffing patterns:
+\begin{center}
+\begin{tabular}{lccc}
+\toprule
+\textbf{Shift} & \textbf{Code} & \textbf{\% of Pool} & \textbf{Example ($|I|=20$)} \\
+\midrule
+Early (7am--3pm) & E & 25\% & 5 nurses \\
+Day (9am--5pm) & D & 30\% & 6 nurses \\
+Late (3pm--11pm) & L & 25\% & 5 nurses \\
+Night (11pm--7am) & N & 15\% & 3 nurses \\
+\bottomrule
+\end{tabular}
+\end{center}
+This scaling ensures demand remains proportional to available capacity as the nurse pool size changes.
+
+\subsubsection{Stochastic Variation}
+For each scenario-day-shift combination, random noise $\epsilon \sim \mathcal{U}(-0.15, 0.15)$ is applied to simulate demand uncertainty:
+\begin{equation}
+D_{jk}^{\omega} = \max(1, \lfloor D_{k}^{base} \cdot (1 + \epsilon) \rfloor)
+\end{equation}
+where the $\max(1, \cdot)$ ensures at least one nurse is always required.
+
+\subsubsection{Weekend Adjustment}
+Weekend days (detected as days where $j \mod 7 \in \{0, 6\}$) receive reduced demand:
+\begin{equation}
+D_{jk}^{\omega,weekend} = \max(1, \lfloor 0.8 \cdot D_{jk}^{\omega} \rfloor)
+\end{equation}
+
+\subsubsection{Output Structure}
+The generator produces a DataFrame with columns: \texttt{scenario} (1 to $|\Omega|$), \texttt{day} (1 to $|J|$), \texttt{shift} $\in \{E, D, L, N\}$, and \texttt{demand} (integer $\geq 1$). This structure is passed directly to the optimization model as exogenous input.
 
 \subsection{Computational Complexity}
 
