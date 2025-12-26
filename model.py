@@ -1926,21 +1926,28 @@ def generate_sample_data(num_nurses: int = 10, num_days: int = 14, num_scenarios
     # Generate demand scenarios
     scenario_data = []
     
+    # Base demand as percentage of nurse pool size (derived from typical hospital patterns)
+    # This ensures demand scales appropriately with the number of available nurses
+    # Rationale: At any given shift, only a fraction of nurses are on duty
+    # E.g., with 20 nurses and 4 shifts/day, ~25% work each shift on average
+    base_demand_pct = {
+        'E': 0.25,  # 25% of nurses for Early shift (morning handover, procedures)
+        'D': 0.30,  # 30% of nurses for Day shift (peak patient activity)
+        'L': 0.25,  # 25% of nurses for Late shift (evening care)
+        'N': 0.15   # 15% of nurses for Night shift (reduced activity)
+    }
+    
     for scenario in range(1, num_scenarios + 1):
         for day in range(1, num_days + 1):
             for shift in shifts:
-                # Base demand with some randomness
-                base_demand = {
-                    'E': 3,
-                    'D': 4,
-                    'L': 3,
-                    'N': 2
-                }
+                # Calculate base demand from nurse pool size
+                base = max(1, int(num_nurses * base_demand_pct[shift]))
                 
-                # Add variability
-                demand = max(1, base_demand[shift] + np.random.randint(-1, 2))
+                # Add stochastic variation: ±15% random fluctuation (paper methodology)
+                variation = np.random.uniform(-0.15, 0.15)
+                demand = max(1, int(base * (1 + variation)))
                 
-                # Weekend adjustments
+                # Weekend adjustment: 80% of weekday demand
                 if day % 7 in [0, 6]:  # Weekend
                     demand = max(1, int(demand * 0.8))
                 

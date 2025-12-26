@@ -8,232 +8,305 @@ import model as m  # Back to using the unified model
 # `model_oop` removed — use functional API in `model.py` instead
 from io import BytesIO
 import json
+import base64
 from solver_config import get_available_solvers, recommend_solver, get_installation_instructions
 
 # --- 1. PAGE CONFIGURATION ---
 st.set_page_config(
     page_title="Nurse Scheduler", 
-    page_icon="🩺", 
+    page_icon="icon.png",  
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for clean professional interface
+# Custom CSS for Professional Engineering Interface
 st.markdown("""
     <style>
-     /* Hide Streamlit branding but keep the header visible so the
-         sidebar toggle (hamburger) remains accessible when collapsed. */
      #MainMenu {visibility: hidden;}
      footer {visibility: hidden;}
-     /* NOTE: do NOT hide `header` - it contains the sidebar toggle button.
-         Hiding it prevents users from reopening the sidebar if previously
-         collapsed (causes intermittent "missing settings" reports). */
     
-    /* Main Container */
-    .main {
-        padding: 2rem 3rem;
-        background: linear-gradient(to bottom, #e6f2ff 0%, #f0f8ff 100%);
-        border-left: 4px solid #4299e1;
-        min-height: 100vh;
+    /* Global Font & Colors */
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+    
+    :root {
+        --primary-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        --hover-gradient: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%);
+        --bg-color: #f8fafc;
+        --card-bg: #ffffff;
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+    }
+
+    html, body, [class*="css"] {
+        font-family: 'Outfit', sans-serif;
+        color: var(--text-primary);
+        background-color: var(--bg-color);
     }
     
-    /* Content wrapper with light blue frame */
-    .block-container {
-        padding-top: 3rem;
-        padding-bottom: 3rem;
-        max-width: 1400px;
-        background: white;
-        border-radius: 16px;
-        border: 3px solid #bee3f8;
-        box-shadow: 0 4px 20px rgba(66, 153, 225, 0.15);
-        margin: 1rem auto;
-    }
-    
-    /* Main Header - Clean & Bold */
-    .main-header {
-        font-size: 4rem;
-        font-weight: 800;
-        color: #1a1a2e;
+    /* Hero Section */
+    .hero-wrapper {
+        position: relative;
+        height: 250px;
+        border-radius: 20px;
+        overflow: hidden;
+        margin-bottom: 3rem;
+        /* background-image set dynamically in python */
+        background-size: cover;
+        background-position: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         text-align: center;
-        padding: 2rem 0 1rem 0;
-        letter-spacing: -1px;
     }
-    
-    /* Subtitle - Clean */
-    .sub-header {
-        font-size: 1.4rem;
-        color: #718096;
+        background-size: cover;
+        background-position: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         text-align: center;
-        padding-bottom: 2rem;
-        font-weight: 400;
     }
-    
-    /* Large Buttons */
-    .stButton > button {
-        height: 4rem;
-        font-size: 1.3rem;
-        font-weight: 700;
-        border-radius: 12px;
-        border: none;
-        letter-spacing: 0.5px;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+
+    .hero-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        /* Removed full overlay to focus on text background */
+        background: transparent; 
+        z-index: 1;
     }
-    
-    .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-    }
-    
-    .stButton > button[kind="primary"] {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-    }
-    
-    /* Metric Cards - Clean & Spacious */
-    .metric-card {
-        background: white;
+
+    .hero-content {
+        position: absolute;
+        top: 0; 
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 2;
         padding: 2rem;
-        border-radius: 16px;
-        border: 2px solid #e2e8f0;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        transition: all 0.3s;
-    }
-    
-    .metric-card:hover {
-        border-color: #667eea;
-        box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-    }
-    
-    /* Section Headers - Larger */
-    h1 {
-        font-size: 2.5rem !important;
-        font-weight: 700 !important;
-        color: #1a1a2e !important;
-        margin-top: 2rem !important;
-    }
-    
-    h2 {
-        font-size: 2rem !important;
-        font-weight: 600 !important;
-        color: #2d3748 !important;
-    }
-    
-    h3 {
-        font-size: 1.5rem !important;
-        font-weight: 600 !important;
-        color: #4a5568 !important;
-    }
-    
-    /* Tabs - Larger & Cleaner */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 1rem;
-        background-color: transparent;
-        padding: 1rem 0;
-    }
-    
-    .stTabs [data-baseweb="tab"] {
-        height: 4rem;
-        padding: 0 2.5rem;
-        font-size: 1.2rem;
-        font-weight: 600;
-        border-radius: 10px;
-        border: 2px solid #e2e8f0;
-        background: white;
-    }
-    
-    .stTabs [aria-selected="true"] {
-        background: #667eea !important;
-        color: white !important;
-        border-color: #667eea !important;
-    }
-    
-    /* Sidebar - Clean & Professional */
-    [data-testid="stSidebar"] {
-        background: #f7fafc;
-        border-right: 1px solid #e2e8f0;
-        padding: 2rem 1rem;
-    }
-    
-    [data-testid="stSidebar"] h1 {
-        font-size: 1.8rem !important;
-    }
-    
-    [data-testid="stSidebar"] h2 {
-        font-size: 1.4rem !important;
-        margin-top: 2rem !important;
-    }
-    
-    /* Input Fields - Larger */
-    .stNumberInput input, .stTextInput input, .stSelectbox select {
-        font-size: 1.1rem !important;
-        height: 3rem !important;
-        border-radius: 8px !important;
-        border: 2px solid #e2e8f0 !important;
-    }
-    
-    .stSlider {
-        padding: 1rem 0;
-    }
-    
-    /* Success/Info boxes - Larger */
-    .stSuccess, .stInfo, .stWarning, .stError {
-        padding: 1.5rem !important;
-        font-size: 1.1rem !important;
-        border-radius: 12px !important;
-        border-width: 0 0 0 6px !important;
-    }
-    
-    /* Expander - Larger */
-    .streamlit-expanderHeader {
-        font-size: 1.2rem !important;
-        font-weight: 600 !important;
-        padding: 1rem 1.5rem !important;
-        background: #f7fafc !important;
-        border-radius: 10px !important;
-    }
-    
-    /* Dataframe - Purple Theme */
-    .dataframe {
-        font-size: 1rem !important;
-        border-radius: 10px !important;
-    }
-    
-    /* Purple gradient for dataframe headers */
-    [data-testid="stDataframe"] {
-        --dataframe-header-bg: #6b46c1 !important;
-        --dataframe-header-color: white !important;
-    }
-    
-    /* Metrics - Larger */
-    [data-testid="stMetricValue"] {
-        font-size: 2.5rem !important;
-        font-weight: 700 !important;
-    }
-    
-    [data-testid="stMetricLabel"] {
-        font-size: 1.2rem !important;
-        font-weight: 500 !important;
-    }
-    
-    /* Footer */
-    .footer {
+        background: rgba(15, 23, 42, 0.45); /* Dark blue overlay, adjusted for visibility */
+        backdrop-filter: blur(4px);       /* Subtle blur to keep image visible but text readable */
         text-align: center;
-        padding: 3rem 0 2rem 0;
-        color: #718096;
-        font-size: 1rem;
-        border-top: 2px solid #e2e8f0;
-        margin-top: 4rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        max-width: none;
     }
+
+    .hero-title {
+        font-size: 4rem !important;
+        font-weight: 800 !important;
+        background: linear-gradient(to right, #ffffff, #e2e8f0);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 0.5rem !important;
+        text-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        letter-spacing: -0.03em !important;
+    }
+
+    .hero-subtitle {
+        font-size: 1.5rem;
+        color: #f8fafc;
+        font-weight: 500;
+        opacity: 0.9;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+    }
+
+    /* Cards */
+    .stMarkdown {
+        border-radius: 1px; /* Reset */
+    }
+    
+    div[data-testid="stExpander"] {
+        background: var(--card-bg);
+        border: 1px solid #e2e8f0;
+        border-radius: 16px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        margin-bottom: 1rem;
+        overflow: hidden;
+    }
+    
+    div[data-testid="stExpander"] > details > summary {
+        font-weight: 600;
+        color: var(--text-primary);
+        padding: 1rem;
+    }
+    
+    div[data-testid="stExpander"] > details > div {
+        padding: 1.5rem;
+        padding-top: 0;
+    }
+
+    /* Buttons - PRIMARY (Gradient) */
+    .stButton > button[kind="primary"] {
+        background: var(--primary-gradient) !important;
+        border: none !important;
+        color: white !important;
+        font-weight: 600 !important;
+        padding: 0.75rem 2rem !important;
+        border-radius: 12px !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.3), 0 2px 4px -1px rgba(79, 70, 229, 0.15) !important;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        width: 100%;
+    }
+    
+    .stButton > button[kind="primary"]:hover {
+        background: var(--hover-gradient) !important;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.4), 0 4px 6px -2px rgba(79, 70, 229, 0.2) !important;
+    }
+
+    .stButton > button[kind="primary"]:active {
+        transform: translateY(0);
+    }
+    
+    /* Buttons - SECONDARY (Default) */
+    .stButton > button[kind="secondary"] {
+        background: white !important;
+        border: 1px solid #cbd5e1 !important;
+        color: #475569 !important;
+        font-weight: 500 !important;
+        border-radius: 10px !important;
+        padding: 0.5rem 1rem !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    .stButton > button[kind="secondary"]:hover {
+        border-color: #94a3b8 !important;
+        background: #f8fafc !important;
+        color: #1e293b !important;
+    }
+
+    /* Inputs */
+    .stTextInput input, .stNumberInput input, .stSelectbox select, .stDateInput input {
+        border-radius: 8px !important;
+        border: 1px solid #e2e8f0 !important;
+    }
+    
+    .stTextInput input:focus, .stNumberInput input:focus, .stSelectbox select:focus {
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1) !important;
+    }
+
+    /* Sidebar */
+    [data-testid="stSidebar"] {
+        background-color: #f8fafc;
+        border-right: 1px solid #e2e8f0;
+    }
+    
+    /* Feature Cards - Gradient & Premium */
+    .feature-card {
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 2rem 1.5rem;
+        text-align: center;
+        height: 100%;
+        border: 1px solid rgba(226, 232, 240, 0.8);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .feature-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 6px;
+        background: var(--primary-gradient);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        border-color: #cbd5e1;
+    }
+    
+    .feature-card:hover::before {
+        opacity: 1;
+    }
+    
+    .feature-icon-wrapper {
+        margin-bottom: 1.5rem;
+        display: flex;
+        justify-content: center;
+    }
+    
+    .feature-icon {
+        font-size: 2rem;
+        color: white;
+        background: var(--primary-gradient);
+        width: 64px;
+        height: 64px;
+        line-height: 64px;
+        border-radius: 20px;
+        box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: transform 0.3s ease;
+    }
+    
+    .feature-card:hover .feature-icon {
+        transform: scale(1.1) rotate(5deg);
+    }
+    
+    .feature-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #1e293b;
+    }
+    
+    .feature-desc {
+        font-size: 0.9rem;
+        color: #64748b;
+        line-height: 1.5;
+    }
+
+
     </style>
 """, unsafe_allow_html=True)
 
 # --- 2. TITLE & BRANDING ---
-st.markdown('<h1 class="main-header">🩺 Nurse Scheduler</h1>', unsafe_allow_html=True)
-st.markdown('<p class="sub-header">Advanced Optimization System for Healthcare Scheduling</p>', unsafe_allow_html=True)
+# Function to get base64 image
+def get_base64_image(image_path):
+    try:
+        with open(image_path, "rb") as img_file:
+            return base64.b64encode(img_file.read()).decode()
+    except Exception:
+        return ""
 
-st.markdown("")  # Spacing
-st.markdown("---")
+# Load banner image
+hero_bg_base64 = get_base64_image("banner.png")
+
+st.markdown(f"""
+<style>
+    /* Hero Section */
+    .hero-wrapper {{
+        background-image: url("data:image/png;base64,{hero_bg_base64}");
+    }}
+</style>
+<div class="hero-wrapper">
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+        <h1 class="hero-title">NURSE SCHEDULER</h1>
+        <div class="hero-subtitle">Optimize • Analyze • Manage</div>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
 # Initialize session state
 if 'results' not in st.session_state:
@@ -249,13 +322,12 @@ with st.sidebar:
     # Sidebar header - clean and professional
     st.markdown("""
         <div style="text-align: center; padding: 0 0 2rem 0;">
-            <div style="font-size: 3rem; margin-bottom: 1rem;">⚙️</div>
-            <h1 style="color: #1a1a2e; margin: 0; font-size: 2rem; font-weight: 700;">Settings</h1>
+            <h1 style="color: #1e293b; margin: 0; font-size: 2rem; font-weight: 700;">Configuration</h1>
         </div>
     """, unsafe_allow_html=True)
     
     # Data Source Selection
-    st.header("📊 Data Source")
+    st.header("Data Source")
     data_source = st.radio(
         "Choose data input method:",
         ["Use Sample Data (Quick Start)", "Upload Custom Data"],
@@ -266,7 +338,7 @@ with st.sidebar:
     scenarios_df = None
     
     if data_source == "Use Sample Data (Quick Start)":
-        st.success("✓ Using sample data")
+        st.success("Using sample data")
         
         col1, col2 = st.columns(2)
         with col1:
@@ -281,7 +353,7 @@ with st.sidebar:
             1
         )
         
-        if st.button("🎲 Generate Sample Data", type="secondary", use_container_width=True):
+        if st.button("🎲 Generate Sample Data", type="primary", use_container_width=True):
             nurses_list, scenarios_df = m.generate_sample_data(num_nurses, num_days, num_scenarios)
             st.session_state.nurses_list = nurses_list
             st.session_state.scenarios_df = scenarios_df
@@ -389,13 +461,13 @@ with st.sidebar:
                                         flat = [cell.strip() for r in rows for cell in r if cell.strip()]
                                         nurses_list = flat
                     except Exception as e:
-                        st.error(f"❌ Failed to parse nurse file: {e}")
+                        st.error(f"Failed to parse nurse file: {e}")
                         st.stop()
 
                 # Final cleaning and validation
                 nurses_list = [n for n in nurses_list if str(n).strip()]
                 if len(nurses_list) == 0:
-                    st.error("❌ Nurse file is empty or could not be parsed. Ensure it contains one name per line or a comma-separated list.")
+                    st.error("Nurse file is empty or could not be parsed. Ensure it contains one name per line or a comma-separated list.")
                     st.stop()
 
                 # Check for duplicates
@@ -403,13 +475,13 @@ with st.sidebar:
                 # Check for duplicates and auto-remove
                 duplicates = [name for name in set(nurses_list) if nurses_list.count(name) > 1]
                 if duplicates:
-                    st.warning(f"⚠️ Duplicate nurse names found: {set(duplicates)}")
-                    st.info("✨ Automatically removing duplicates (keeping first occurrence)")
+                    st.warning(f"Duplicate nurse names found: {set(duplicates)}")
+                    st.info("Automatically removing duplicates (keeping first occurrence)")
                     # Remove duplicates while preserving order
                     seen = set()
                     nurses_list = [x for x in nurses_list if not (x in seen or seen.add(x))]
-                    st.success(f"✅ Cleaned to {len(nurses_list)} unique nurses")
-                st.success(f"✓ Loaded {len(nurses_list)} nurses")
+                    st.success(f"Cleaned to {len(nurses_list)} unique nurses")
+                st.success(f"Loaded {len(nurses_list)} nurses")
                 
                 # ============================================================
                 # LOAD AND VALIDATE SCENARIO FILE
@@ -421,21 +493,21 @@ with st.sidebar:
                 missing_cols = [col for col in required_cols if col not in scenarios_df.columns]
                 
                 if missing_cols:
-                    st.error(f"❌ Scenario file missing required columns: {missing_cols}")
+                    st.error(f"Scenario file missing required columns: {missing_cols}")
                     st.error(f"**Required columns:** {required_cols}")
                     st.error(f"**Found columns:** {list(scenarios_df.columns)}")
                     st.stop()
                 
                 # Check for empty dataframe
                 if len(scenarios_df) == 0:
-                    st.error("❌ Scenario file is empty!")
+                    st.error("Scenario file is empty!")
                     st.stop()
                 
                 # Check for NaN values
                 if scenarios_df.isnull().any().any():
                     null_counts = scenarios_df.isnull().sum()
                     null_cols = null_counts[null_counts > 0]
-                    st.error(f"❌ Scenario file contains missing values:")
+                    st.error(f"Scenario file contains missing values:")
                     for col, count in null_cols.items():
                         st.error(f"   - {col}: {count} missing values")
                     st.stop()
@@ -443,7 +515,7 @@ with st.sidebar:
                 # Check for negative demands
                 if (scenarios_df['demand'] < 0).any():
                     negative_rows = scenarios_df[scenarios_df['demand'] < 0]
-                    st.error(f"❌ Found {len(negative_rows)} rows with negative demand!")
+                    st.error(f"Found {len(negative_rows)} rows with negative demand!")
                     st.dataframe(negative_rows.head())
                     st.stop()
                 
@@ -455,13 +527,13 @@ with st.sidebar:
                 actual_rows = len(scenarios_df)
                 
                 if actual_rows != expected_rows:
-                    st.warning(f"⚠️ **Data completeness check:**")
+                    st.warning(f"**Data completeness check:**")
                     st.warning(f"   - Expected rows: {expected_rows} ({num_scenarios} scenarios × {num_days} days × {num_shifts} shifts)")
                     st.warning(f"   - Actual rows: {actual_rows}")
                     st.warning(f"   - Missing or extra: {abs(expected_rows - actual_rows)} rows")
                     
                     if actual_rows < expected_rows:
-                        st.error("❌ Data appears incomplete! Some scenario/day/shift combinations are missing.")
+                        st.error("Data appears incomplete! Some scenario/day/shift combinations are missing.")
                         
                         # Show which combinations are missing
                         from itertools import product
@@ -479,24 +551,24 @@ with st.sidebar:
                             st.error(f"**{len(missing)} combinations are missing** (showing first 10):")
                             st.error(str(list(missing)[:10]))
                 
-                st.success(f"✓ Loaded {len(scenarios_df)} demand records")
-                st.info(f"   📊 **Data structure:** {num_scenarios} scenarios × {num_days} days × {num_shifts} shifts")
+                st.success(f"Loaded {len(scenarios_df)} demand records")
+                st.info(f"   Data structure: {num_scenarios} scenarios × {num_days} days × {num_shifts} shifts")
                 
                 # Store in session state for use in results display
                 st.session_state.nurses_list = nurses_list
                 st.session_state.scenarios_df = scenarios_df
                 
             except Exception as e:
-                st.error(f"❌ Error loading files: {e}")
+                st.error(f"Error loading files: {e}")
                 st.exception(e)
                 st.stop()
     
     st.divider()
     
     # --- Model Parameters ---
-    st.header("💰 Cost Parameters")
+    st.header("Cost Parameters")
     
-    with st.expander("💵 Wage Costs", expanded=True):
+    with st.expander("Wage Costs", expanded=True):
         st.markdown("""
         **Cost hierarchy determines when each type is used:**
         - Stage 1: Regular ($c_1$) and Overtime ($c_2$) planned in advance
@@ -512,7 +584,7 @@ with st.sidebar:
         q_minus = st.number_input("Shift Cancellation Cost ($q^-$)", 0.0, 100.0, 2.0, 1.0,
             help="Cost per cancelled shift (paper: q⁻=2). Set to 0 to ignore cancellation costs.")
     
-    with st.expander("⚠️ Quality Penalties (Soft Constraints)", expanded=False):
+    with st.expander("Quality Penalties (Soft Constraints)", expanded=False):
         st.caption("These penalties discourage undesirable schedule patterns without making them impossible")
         c3 = st.number_input(
             "Stand-Alone Shift Penalty ($c_3$)", 
@@ -525,7 +597,7 @@ with st.sidebar:
             help="Penalty for bad shift sequences (e.g., Late→Early, Day→Early)"
         )
     
-    with st.expander("🚨 Recourse Bounds (Optional)", expanded=False):
+    with st.expander("Recourse Bounds (Optional)", expanded=False):
         st.caption("Limit emergency staffing and cancellations per shift (leave unchecked for unlimited)")
         
         enable_recourse_bounds = st.checkbox(
@@ -554,17 +626,17 @@ with st.sidebar:
     
     st.header("📋 Work Rules")
     
-    with st.expander("⚖️ Basic Shift Constraints", expanded=True):
+    with st.expander("Basic Shift Constraints", expanded=True):
         n1 = st.slider("Max Total Shifts ($n_1$)", 1, 30, 15, 1)
         n2 = st.slider("Max Night Shifts ($n_2$)", 0, 15, 5, 1)
         n3 = st.slider("Min Regular Shifts ($n_3$)", 0, 20, 5, 1)
         
         # Show overtime capacity info
         overtime_capacity = n1 - n3
-        st.info(f"ℹ️ Overtime capacity: Up to {overtime_capacity} overtime shifts per nurse (= $n_1$ - $n_3$)")
+        st.info(f"Overtime capacity: Up to {overtime_capacity} overtime shifts per nurse (= $n_1$ - $n_3$)")
         
         st.markdown("---")
-        st.caption("⚙️ **Overtime Logic Strategy**")
+        st.caption("Overtime Logic Strategy")
         enable_nss_overtime = st.checkbox(
             "Enable NSS Strict Overtime Rules", 
             value=False,
@@ -572,7 +644,7 @@ with st.sidebar:
         )
     
     # NEW: Advanced constraints for university project
-    with st.expander("🏖️ Weekend Constraints (Advanced)", expanded=False):
+    with st.expander("Weekend Constraints (Advanced)", expanded=False):
         st.caption("Constraint 9: Minimum Complete Weekends Off")
         n4 = st.number_input(
             "Min Complete Weekends Off ($n_4$)", 
@@ -581,7 +653,7 @@ with st.sidebar:
         )
         
         if n4 > 0:
-            st.info("💡 Weekend detection requires a start date")
+            st.info("Weekend detection requires a start date")
             start_date = st.date_input(
                 "Planning Period Start Date",
                 help="Used to determine which days are weekends"
@@ -590,7 +662,7 @@ with st.sidebar:
         else:
             start_date_str = None
     
-    with st.expander("🌙 Night Shift Rest Rules (Advanced)", expanded=False):
+    with st.expander("Night Shift Rest Rules (Advanced)", expanded=False):
         st.caption("Constraints 10-13: Night shift safety and rest requirements")
         night_rest_enabled = st.checkbox(
             "Enable Night Shift Rest Constraints",
@@ -613,9 +685,9 @@ with st.sidebar:
             min_consecutive_nights = 2
             days_off_after_nights = 2
     
-    with st.expander("📊 Shift Type Quotas (Advanced)", expanded=False):
+    with st.expander("Shift Type Quotas (Advanced)", expanded=False):
         st.caption("Constraints 2-5: Min/Max for each specific shift type")
-        st.warning("⚠️ Setting quotas can make the problem infeasible! Use carefully.")
+        st.warning("Setting quotas can make the problem infeasible! Use carefully.")
         
         use_shift_quotas = st.checkbox(
             "Enable Shift Type Quotas",
@@ -656,12 +728,12 @@ with st.sidebar:
                     shift_quotas['N'] = {'min': n_min, 'max': n_max}
             
             if shift_quotas:
-                st.success(f"✓ Quotas set for {len(shift_quotas)} shift types")
+                st.success(f"Quotas set for {len(shift_quotas)} shift types")
     
     st.divider()
     
     # --- Model Selection ---
-    st.header("🎯 Optimization Model")
+    st.header("Optimization Model")
     
     model_choice = st.selectbox(
         "Select Model Type:",
@@ -678,7 +750,7 @@ with st.sidebar:
     
     if "CVaR" in model_choice:
         model_type_code = "SDM-CVaR"
-        with st.expander("🛡️ Risk Parameters", expanded=True):
+        with st.expander("Risk Parameters", expanded=True):
             sigma = st.slider(
                 "Confidence Level (σ)", 
                 0.90, 0.99, 0.95, 0.01,
@@ -693,7 +765,7 @@ with st.sidebar:
     st.divider()
     
     # --- Fatigue Modeling ---
-    st.header("🧠 Fatigue Modeling")
+    st.header("Fatigue Modeling")
     
     enable_fatigue = st.checkbox(
         "Enable Fatigue Modeling",
@@ -704,7 +776,7 @@ with st.sidebar:
     
     # Fatigue parameters (only shown if fatigue enabled)
     if enable_fatigue:
-        with st.expander("⚙️ Fatigue Parameters", expanded=False):
+        with st.expander("Fatigue Parameters", expanded=False):
             st.caption("Configure the exponential fatigue model: F(t) = 1 - e^(-λt)")
             
             col1, col2 = st.columns(2)
@@ -735,7 +807,7 @@ with st.sidebar:
                     help="Duration of each shift in hours"
                 )
             
-            st.info(f"💡 **PWL Approximation:** Using 8 segments (0.713% max error, 0.398% avg error)")
+            st.info(f"PWL Approximation: Using 8 segments (0.713% max error, 0.398% avg error)")
     else:
         # Set defaults when fatigue disabled
         lambda_param = 0.03
@@ -743,12 +815,12 @@ with st.sidebar:
         max_fatigue_threshold = 0.70
         shift_duration = 12
         
-        st.warning("⚠️ **Fatigue modeling disabled.** The system will optimize costs without considering nurse fatigue or patient safety.")
+        st.warning("Fatigue modeling disabled. The system will optimize costs without considering nurse fatigue or patient safety.")
     
     st.divider()
     
     # --- Solver Selection ---
-    st.header("⚙️ Solver Configuration")
+    st.header("Solver Configuration")
     
     from solver_config import auto_select_solver, get_available_solvers
     
@@ -774,13 +846,13 @@ with st.sidebar:
     # Determine which solver to use
     if solver_choice == 'AUTO (Recommended)':
         selected_solver = auto_select_solver()
-        st.info(f"🎯 **Auto-selected**: {selected_solver} ({solver_details.get(selected_solver, {}).get('speed', 'Standard')})")
+        st.info(f"Auto-selected: {selected_solver} ({solver_details.get(selected_solver, {}).get('speed', 'Standard')})")
     else:
         selected_solver = solver_choice
-        st.success(f"✅ **Using**: {selected_solver}")
+        st.success(f"Using: {selected_solver}")
     
     # Show solver details in expander
-    with st.expander("📋 Solver Details", expanded=False):
+    with st.expander("Solver Details", expanded=False):
         solver_info = solver_details.get(selected_solver, {})
         
         if solver_info:
@@ -790,7 +862,7 @@ with st.sidebar:
         
         # Show installation tip if not using fastest solver
         if selected_solver == 'CBC' and available_solvers.get('HiGHS', {}).get('available') == False:
-            st.warning("💡 **Tip**: Install HiGHS for 3-5× faster solving!")
+            st.warning("Tip: Install HiGHS for 3-5× faster solving!")
             st.code("pip install highspy", language="bash")
         
         # Show all available solvers
@@ -802,23 +874,25 @@ with st.sidebar:
     st.divider()
     
     # --- Solve Button ---
-    st.markdown("### 🚀 Generate Schedule")
+    st.markdown("### Generate Schedule")
     st.markdown("")  # Spacing
     
     if nurses_list is None or scenarios_df is None:
-        st.warning("⚠️ Please configure your data in the sidebar first")
-        st.button("🎯 OPTIMIZE SCHEDULE", type="primary", use_container_width=True, disabled=True)
+        st.warning("Please configure your data in the sidebar first")
+        st.button("⚡ Optimize Schedule", type="primary", use_container_width=True, disabled=True)
         solve_button = False
     else:
-        st.success(f"✅ Ready: {len(nurses_list)} nurses • {len(scenarios_df)} scenarios")
+        st.success(f"Ready: {len(nurses_list)} nurses • {len(scenarios_df)} scenarios")
         st.markdown("")  # Spacing
         
         solve_button = st.button(
-            "🎯 OPTIMIZE SCHEDULE", 
+            "⚡ Optimize Schedule",  
             type="primary", 
             use_container_width=True,
             help="Generate optimal nurse schedule"
         )
+
+
 
 
 # --- 4. MAIN CONTENT AREA ---
@@ -843,7 +917,7 @@ if ('data_source' not in locals()) and ('data_source' not in st.session_state):
             fb_num_days = st.number_input("Planning Days", 7, 90, 14, 1, key="fb_num_days")
             fb_num_scenarios = st.slider("Demand Scenarios", 3, 300, 5, 1, key="fb_num_scenarios")
 
-            if st.button("🎲 Generate Sample Data (Fallback)", key="fb_generate"):
+            if st.button("🎲 Generate Sample Data (Fallback)", type="primary", key="fb_generate"):
                 try:
                     nurses_list, scenarios_df = m.generate_sample_data(fb_num_nurses, fb_num_days, fb_num_scenarios)
                     st.session_state.nurses_list = nurses_list
@@ -853,6 +927,82 @@ if ('data_source' not in locals()) and ('data_source' not in st.session_state):
                     st.error(f"Failed to generate sample data: {e}")
         else:
             st.info("If you need to upload custom files, please open the sidebar (click the ⋮ menu at top-left if hidden) and use the Upload option there.")
+
+# --- LANDING PAGE CARDS (Moved to Main Area) ---
+# Display only if we haven't solved yet and don't have results
+if not solve_button and 'results' in st.session_state and st.session_state.results is None:
+    
+    st.markdown("""
+    <div style="text-align: center; margin-bottom: 2rem; margin-top: 1rem;">
+        <h2 style="font-size: 2rem; background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Powerful Features</h2>
+        <p style="color: var(--text-secondary); font-size: 1.1rem;">Everything you need to optimize your workforce</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Row 1
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon-wrapper"><div class="feature-icon">📊</div></div>
+            <div class="feature-title">Data Driven</div>
+            <div class="feature-desc">Upload your own data or use our smart sample generator to model complex staffing scenarios instantly.</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with col2:
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon-wrapper"><div class="feature-icon">⚡</div></div>
+            <div class="feature-title">Fast Solver</div>
+            <div class="feature-desc">Powered by advanced algorithms to find the optimal schedule in seconds, minimizing costs and conflicts.</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with col3:
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon-wrapper"><div class="feature-icon">🛡️</div></div>
+            <div class="feature-title">Risk Aware</div>
+            <div class="feature-desc">Manage uncertainty with CVaR optimization to robustly handle unexpected demand spikes.</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Row 2
+    col4, col5, col6 = st.columns(3)
+    
+    with col4:
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon-wrapper"><div class="feature-icon">✨</div></div>
+            <div class="feature-title">Fatigue Model</div>
+            <div class="feature-desc">Ensure patient safety by tracking nurse fatigue levels with our exponential fatigue modeling system.</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with col5:
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon-wrapper"><div class="feature-icon">📈</div></div>
+            <div class="feature-title">Visual Analytics</div>
+            <div class="feature-desc">Interactive charts and heatmaps provide deep insights into schedule quality and resource allocation.</div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with col6:
+        st.markdown("""
+        <div class="feature-card">
+            <div class="feature-icon-wrapper"><div class="feature-icon">📄</div></div>
+            <div class="feature-title">Export Reports</div>
+            <div class="feature-desc">Download professional Excel and PDF reports ready for administrative review and distribution.</div>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("<br><br>", unsafe_allow_html=True)
+
 
 if solve_button and nurses_list is not None and scenarios_df is not None:
     
