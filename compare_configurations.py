@@ -168,10 +168,11 @@ def compare_configurations():
     print("Loading test data...")
     nurses_file = r"c:\Users\rahma\Documents\GitHub\NSS\data\analysis_nurses.csv"
     scenarios_file = r"c:\Users\rahma\Documents\GitHub\NSS\data\analysis_scenarios.csv"
-    
-    nurses_df = pd.read_csv(nurses_file)
+
+    # Match app.py: read with header=None, treat first row as a nurse
+    nurses_df = pd.read_csv(nurses_file, header=None)
+    nurses_list = nurses_df.iloc[:, 0].astype(str).tolist()
     scenarios_df = pd.read_csv(scenarios_file)
-    nurses_list = nurses_df['Nurse'].tolist()
     
     num_scenarios = scenarios_df['scenario'].nunique()
     num_days = scenarios_df['day'].nunique()

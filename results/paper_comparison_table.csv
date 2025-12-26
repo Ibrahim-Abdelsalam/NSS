@@ -1,0 +1,17 @@
+ID,Model,Fatigue,Constraint,Total Cost ($),Regular,Overtime,Emergency,Time (s)
+1,SDM,False,,"$16,050",150,0,0.0,18.16
+2,SDM,False,Shift Type Quotas,"$16,050",150,0,0.0,18.31
+3,SDM,False,Min Weekends Off,"$16,240",140,0,0.0,68.74
+4,SDM,False,Night Rest Requirements,"$16,050",150,0,0.0,78.36
+5,SDM,True,,"$41,370",0,0,0.0,40.00
+6,SDM,True,Shift Type Quotas,"$41,370",0,0,0.0,28.35
+7,SDM,True,Min Weekends Off,"$41,370",0,0,0.0,31.22
+8,SDM,True,Night Rest Requirements,"$41,370",0,0,0.0,68.29
+9,SDM-CVaR,False,,"$16,050",150,0,0.0,15.63
+10,SDM-CVaR,False,Shift Type Quotas,"$16,050",150,0,0.0,23.81
+11,SDM-CVaR,False,Min Weekends Off,"$16,240",140,0,0.0,129.52
+12,SDM-CVaR,False,Night Rest Requirements,"$16,050",150,0,0.0,88.88
+13,SDM-CVaR,True,,"$41,370",0,0,0.0,39.75
+14,SDM-CVaR,True,Shift Type Quotas,"$41,370",0,0,0.0,25.93
+15,SDM-CVaR,True,Min Weekends Off,"$41,370",0,0,0.0,24.87
+16,SDM-CVaR,True,Night Rest Requirements,"$41,370",0,0,0.0,48.57

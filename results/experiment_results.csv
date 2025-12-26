@@ -1,0 +1,17 @@
+config_id,model_type,fatigue_enabled,advanced_constraint,description,status,solve_time,total_cost,stage1_cost,stage2_cost,soft_penalty_cost,fatigue_cost,num_regular_shifts,num_overtime_shifts,avg_emergency_staff,avg_fatigue_level,max_fatigue_level,feasibility_notes
+1,SDM,False,None,SDM + None (no Fatigue),Optimal,18.162432432174683,16050.0,15000.0,1050.0,0,0,150,0,0,0.0,0,Success
+2,SDM,False,Shift Type Quotas,SDM + Shift Type Quotas (no Fatigue),Optimal,18.312207221984863,16050.000000000007,15000.0,1050.0000000000073,0,0,150,0,0,0.0,0,Success
+3,SDM,False,Min Weekends Off,SDM + Min Weekends Off (no Fatigue),Optimal,68.73744702339172,16239.999999999996,14000.0,2239.9999999999964,0,0,140,0,0,0.0,0,Success
+4,SDM,False,Night Rest Requirements,SDM + Night Rest Requirements (no Fatigue),Optimal,78.36316204071045,16050.0,15000.0,1050.0,0,0,150,0,0,0.0,0,Success
+5,SDM,True,None,SDM + None (with Fatigue),Optimal,39.99788761138916,41370.0,0.0,41370.0,0,0,0,0,0,0.0,0,Success
+6,SDM,True,Shift Type Quotas,SDM + Shift Type Quotas (with Fatigue),Optimal,28.354639053344727,41370.0,0.0,41370.0,0,0,0,0,0,0.0,0,Success
+7,SDM,True,Min Weekends Off,SDM + Min Weekends Off (with Fatigue),Optimal,31.219033002853394,41370.0,0.0,41370.0,0,0,0,0,0,0.0,0,Success
+8,SDM,True,Night Rest Requirements,SDM + Night Rest Requirements (with Fatigue),Optimal,68.28527212142944,41370.0,0.0,41370.0,0,0,0,0,0,0.0,0,Success
+9,SDM-CVaR,False,None,SDM-CVaR + None (no Fatigue),Optimal,15.626975297927856,16049.999999999824,15000.0,1049.9999999998236,0,0,150,0,0,0.0,0,Success
+10,SDM-CVaR,False,Shift Type Quotas,SDM-CVaR + Shift Type Quotas (no Fatigue),Optimal,23.813129901885986,16049.999999999996,15000.0,1049.9999999999964,0,0,150,0,0,0.0,0,Success
+11,SDM-CVaR,False,Min Weekends Off,SDM-CVaR + Min Weekends Off (no Fatigue),Optimal,129.52418160438538,16239.99999999999,14000.0,2239.999999999991,0,0,140,0,0,0.0,0,Success
+12,SDM-CVaR,False,Night Rest Requirements,SDM-CVaR + Night Rest Requirements (no Fatigue),Optimal,88.87927961349487,16050.0,15000.0,1050.0,0,0,150,0,0,0.0,0,Success
+13,SDM-CVaR,True,None,SDM-CVaR + None (with Fatigue),Optimal,39.75027108192444,41370.0,0.0,41370.0,0,0,0,0,0,0.0,0,Success
+14,SDM-CVaR,True,Shift Type Quotas,SDM-CVaR + Shift Type Quotas (with Fatigue),Optimal,25.929044008255005,41370.0,0.0,41370.0,0,0,0,0,0,0.0,0,Success
+15,SDM-CVaR,True,Min Weekends Off,SDM-CVaR + Min Weekends Off (with Fatigue),Optimal,24.866750240325928,41370.0,0.0,41370.0,0,0,0,0,0,0.0,0,Success
+16,SDM-CVaR,True,Night Rest Requirements,SDM-CVaR + Night Rest Requirements (with Fatigue),Optimal,48.572585105895996,41370.0,0.0,41370.0,0,0,0,0,0,0.0,0,Success
