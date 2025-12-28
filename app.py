@@ -4,7 +4,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import model_2  as m  # Back to using the unified model
+import model  as m  # Back to using the unified model
 # `model_oop` removed — use functional API in `model.py` instead
 from io import BytesIO
 import json
@@ -843,26 +843,6 @@ with st.sidebar:
     else:
         selected_solver = solver_choice
         st.success(f"Using: {selected_solver}")
-    
-    # Show solver details in expander
-    with st.expander("Solver Details", expanded=False):
-        solver_info = solver_details.get(selected_solver, {})
-        
-        if solver_info:
-            st.write(f"**Name**: {solver_info.get('name', 'Unknown')}")
-            st.write(f"**Speed**: {solver_info.get('speed', 'Unknown')}")
-            st.write(f"**Cost**: {solver_info.get('cost', 'Unknown')}")
-        
-        # Show installation tip if not using fastest solver
-        if selected_solver == 'CBC' and available_solvers.get('HiGHS', {}).get('available') == False:
-            st.warning("Tip: Install HiGHS for 3-5× faster solving!")
-            st.code("pip install highspy", language="bash")
-        
-        # Show all available solvers
-        st.write("**All Solvers Status:**")
-        for name, info in available_solvers.items():
-            status = "✅" if info['available'] else "❌"
-            st.write(f"{status} {name}: {info['speed']}")
     
     st.divider()
     
