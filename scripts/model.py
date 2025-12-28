@@ -685,9 +685,9 @@ Suggested Solutions:
     #          and SO_i <= SR_i (if overtime used then SR must be 1)
     # ------------------------------------------------------------------------
     for i in I_nurses:
-        # SR definition: must be 0 if no sr assigned, can be 1 otherwise
+        # SR definition: must be 0 if no shifts (regular OR overtime) assigned
         prob += (
-            SR[i] <= pulp.lpSum(sr[i][j][k] for j in J_days for k in K_shifts),
+            SR[i] <= pulp.lpSum(sr[i][j][k] + so[i][j][k] for j in J_days for k in K_shifts),
             f"SR_Def_{i}"
         )
         # SO definition

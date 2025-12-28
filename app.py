@@ -4,7 +4,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import model  as m  # Back to using the unified model
+import model_2  as m  # Back to using the unified model
 # `model_oop` removed — use functional API in `model.py` instead
 from io import BytesIO
 import json
