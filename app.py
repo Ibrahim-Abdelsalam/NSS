@@ -635,13 +635,6 @@ with st.sidebar:
         overtime_capacity = n1 - n3
         st.info(f"Overtime capacity: Up to {overtime_capacity} overtime shifts per nurse (= $n_1$ - $n_3$)")
         
-        st.markdown("---")
-        st.caption("Overtime Logic Strategy")
-        enable_nss_overtime = st.checkbox(
-            "Enable NSS Strict Overtime Rules", 
-            value=False,
-            help="If checked: Forces Strict Regular Quota and Weekly Overtime Caps (NSS Enhanced). If unchecked: Uses original Paper logic (Standard)."
-        )
     
     # NEW: Advanced constraints for university project
     with st.expander("Weekend Constraints (Advanced)", expanded=False):
@@ -1026,9 +1019,6 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
         'night_rest_enabled': night_rest_enabled,
         'min_consecutive_nights': min_consecutive_nights,
         'days_off_after_nights': days_off_after_nights,
-        
-        # Logic Switch
-        'allow_overtime_paradox': not enable_nss_overtime,  # True = Paper Mode, False = NSS Mode
         
         # Recourse bounds (Constraints 17-18 from paper)
         'max_emergency_staff': max_emergency_staff,

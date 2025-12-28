@@ -798,21 +798,14 @@ Suggested Solutions:
             )
 
     # ============================================================================
-    # CONSTRAINT 7.5: Maximum Overtime Shifts per Week (PAPER-BASED)
+    # CONSTRAINT 7.5: Maximum Overtime Shifts per Week (NSS Mode - ALWAYS ENFORCED)
     # ============================================================================
     # Mathematical: Σⱼₖ so_{ijk} ≤ 1  ∀i ∈ I, w ∈ W (per week)
     # Meaning: Each nurse can work at most 1 overtime shift per week
-    # Purpose: Hospital regulation from paper (Section 5.1)
-    # Note: This constraint forces the model to use regular shifts more and 
-    #       limits overtime to truly exceptional cases
-    #
-    # CONFIGURATION:
-    #   - If allow_overtime_paradox=True (Paper Mode): This constraint is SKIPPED
-    #   - If allow_overtime_paradox=False (NSS Mode): This constraint is ENFORCED
+    # Purpose: Hospital regulation to ensure staff welfare and compliance.
+    # Result: Limits overtime to truly exceptional cases.
     # ============================================================================
-    allow_overtime_paradox = model_params.get('allow_overtime_paradox', True) # Default to Paper Mode
-    
-    if len(J_days) >= 7 and not allow_overtime_paradox:
+    if len(J_days) >= 7:
         # Calculate weeks - each 7 days is a week
         num_weeks = len(J_days) // 7
         remainder_days = len(J_days) % 7
@@ -840,32 +833,17 @@ Suggested Solutions:
                 )
     
     # ============================================================================
-    # CONSTRAINT 8: Regular Shift Quota (Paper vs NSS Logic)
+    # CONSTRAINT 8: Regular Shift Quota (Strict NSS Mode)
     # ============================================================================
-    # CONFIGURATION:
-    # 1. Paper Mode (allow_overtime_paradox=True):
-    #    Mathematical: Σⱼₖ sr_{ijk} ≥ n₃ · SR_i
-    #    Meaning: Minimum requirement only. Solver will prioritize cheaper regular shifts.
-    #    Result: "Overtime Paradox" (0 overtime used)
-    #
-    # 2. NSS Mode (allow_overtime_paradox=False):
-    #    Mathematical: Σⱼₖ sr_{ijk} == n₃ · SR_i
-    #    Meaning: Strict quota. Identify exactly n3 shifts as "Regular".
-    #    Result: Forces model to use Overtime for any extra work.
+    # Mathematical: Σⱼₖ sr_{ijk} == n₃ · SR_i
+    # Meaning: Strict quota. Identify exactly n3 shifts as "Regular".
+    # Result: Forces model to use Overtime for any work beyond the regular requirement.
     # ============================================================================
     for i in I_nurses:
-        if allow_overtime_paradox:
-             # Paper Mode: Minimum constraint (allows cheap regular shifts to dominate)
-             prob += (
-                pulp.lpSum(sr[i][j][k] for j in J_days for k in K_shifts) >= n3 * SR[i],
-                f"MinRegularShifts_{i}"
-            )
-        else:
-            # NSS Mode: Strict Equality (Forces overtime usage)
-            prob += (
-                pulp.lpSum(sr[i][j][k] for j in J_days for k in K_shifts) == n3 * SR[i],
-                f"StrictRegularQuota_{i}"
-            )
+        prob += (
+            pulp.lpSum(sr[i][j][k] for j in J_days for k in K_shifts) == n3 * SR[i],
+            f"StrictRegularQuota_{i}"
+        )
         
     # ============================================================================
     # CONSTRAINT 9: Minimum Complete Weekends Off (ADVANCED)
