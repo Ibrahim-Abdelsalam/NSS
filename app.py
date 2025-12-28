@@ -4,7 +4,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import model as m  # Back to using the unified model
+import model_2  as m  # Back to using the unified model
 # `model_oop` removed — use functional API in `model.py` instead
 from io import BytesIO
 import json
@@ -803,7 +803,7 @@ with st.sidebar:
                 
                 shift_duration = st.number_input(
                     "Shift Duration (hours)",
-                    8, 16, 12, 1,
+                    6, 16, 12, 1,
                     help="Duration of each shift in hours"
                 )
             
@@ -1012,8 +1012,10 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
         'c3': c3, 'c4': c4,  # Soft constraint penalties
         'n1': n1, 'n2': n2, 'n3': n3,
         
-        # Fatigue modeling parameters
-        'lambda_param': lambda_param,
+        # Fatigue modeling parameters (LFFR Model - Jaber et al. 2013)
+        'patient_safety_enabled': enable_fatigue,  # KEY FLAG - enables fatigue constraints
+        'fatigue_lambda': lambda_param,  # λ: Fatigue accumulation rate
+        'recovery_mu': 0.05,  # μ': Recovery rate (faster than fatigue)
         'patient_safety_weight': patient_safety_weight,
         'max_fatigue_threshold': max_fatigue_threshold,
         'shift_duration': shift_duration,

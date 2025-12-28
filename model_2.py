@@ -246,9 +246,7 @@ def build_and_solve_model(
             - "AUTO": Automatically select best available free solver (HiGHS or CBC)
             - "HiGHS": Use HiGHS solver (faster, recommended if installed)
             - "CBC": Use COIN-OR CBC solver (reliable, slower)
-            - "GUROBI": Use Gurobi (requires license)
-            - "CPLEX": Use IBM CPLEX (requires license)
-    
+            - "GUROBI": Use Gurobi (requires license)    
     Returns:
         tuple: (prob, status)
             - prob (pulp.LpProblem): The solved PuLP optimization model containing:
@@ -279,7 +277,7 @@ def build_and_solve_model(
         >>> params = {
         ...     'c1': 100, 'c2': 150, 'q_plus': 200, 'q_minus': 0,
         ...     'n1': 15, 'n2': 5, 'n3': 10,
-        ...     'sigma': 0.95, 'mu': 5.0
+        ...     'sigma': 0.95, 'mu': 50.0
         ... }
         >>> prob, status = build_and_solve_model(nurses, scenarios, params, "SDM")
         >>> if status == "Optimal":
@@ -301,17 +299,23 @@ def build_and_solve_model(
 
     # --- 1. EXTRACT DATA & CREATE SETS ---
     
-    # Get sets from the scenario data
+    # Get unique sets
     I_nurses = nurses_list  
     J_days = sorted(scenarios_df['day'].unique(), key=int)
     K_shifts = scenarios_df['shift'].unique()
     W_scenarios = scenarios_df['scenario'].unique()
+
+    # Validate we have data to work with (defensive programming)
+    if len(W_scenarios) == 0:
+        raise ValueError("No scenarios provided in scenarios_df - cannot build model")
+    if len(I_nurses) == 0:
+        raise ValueError("No nurses provided in nurses_list - cannot build model")
     
-    # Create a fast lookup dictionary for R_jk_omega (Demand)
-    # This is the R_jk^ω from the paper
+    # Get demand as a dictionary: (day, shift, scenario) -> demand
     R_demand = scenarios_df.set_index(['day', 'shift', 'scenario'])['demand'].to_dict()
 
     # Get probabilities (assume all scenarios are equally likely for this prototype)
+    # Now guaranteed safe because len(W_scenarios) > 0
     scenario_probability = {w: 1.0 / len(W_scenarios) for w in W_scenarios}
     
     # Extract model parameters from the dictionary
@@ -326,19 +330,23 @@ def build_and_solve_model(
     
     # CVaR parameters (if used)
     sigma = model_params.get('sigma', 0.95) # Default 0.95
-    mu = model_params.get('mu', 5.0)       # Default 5.0
+    mu = model_params.get('mu', 50.0)      # Default 50.0 (increased from 5.0 based on sensitivity testing)
     
     # NEW ADVANCED CONSTRAINTS PARAMETERS
     # Constraint 9: Minimum complete weekends off
     n4 = model_params.get('n4', 0)  # Min complete weekends off (0 = disabled)
     start_date = model_params.get('start_date', None)  # Start date for weekend detection
     
-    # FATIGUE MODELING PARAMETERS (Jaber et al. 2013)
+    # FATIGUE MODELING PARAMETERS (Jaber et al. 2013 - LFFR Model)
+    # Learning-Forgetting-Fatigue-Recovery model with exponential fatigue/recovery
     patient_safety_enabled = model_params.get('patient_safety_enabled', False)
     patient_safety_weight = model_params.get('patient_safety_weight', 50.0)
-    fatigue_lambda = model_params.get('fatigue_lambda', 0.03)
+    fatigue_lambda = model_params.get('fatigue_lambda', 0.03)  # λ: Fatigue accumulation rate
+    recovery_mu = model_params.get('recovery_mu', 0.05)  # μ': Recovery rate (faster than fatigue)
     max_fatigue_threshold = model_params.get('max_fatigue_threshold', 0.70)
     shift_duration = model_params.get('shift_duration', 12)
+    rest_hours_off = 24  # Hours of rest when nurse is OFF (full day)
+    rest_hours_between = 12  # Hours of rest between consecutive shifts
     
     # Constraints 2-5: Min/Max for each shift type
     shift_quotas = model_params.get('shift_quotas', {})
@@ -797,20 +805,67 @@ Suggested Solutions:
     # Purpose: Hospital regulation from paper (Section 5.1)
     # Note: This constraint forces the model to use regular shifts more and 
     #       limits overtime to truly exceptional cases
+    #
+    # CONFIGURATION:
+    #   - If allow_overtime_paradox=True (Paper Mode): This constraint is SKIPPED
+    #   - If allow_overtime_paradox=False (NSS Mode): This constraint is ENFORCED
     # ============================================================================
+    allow_overtime_paradox = model_params.get('allow_overtime_paradox', True) # Default to Paper Mode
+    
+    if len(J_days) >= 7 and not allow_overtime_paradox:
+        # Calculate weeks - each 7 days is a week
+        num_weeks = len(J_days) // 7
+        remainder_days = len(J_days) % 7
+        
+        for i in I_nurses:
+            # Full weeks
+            for week in range(num_weeks):
+                week_start = week * 7 + 1
+                week_end = (week + 1) * 7
+                week_days = [d for d in J_days if week_start <= d <= week_end]
+                
+                prob += (
+                    pulp.lpSum(so[i][j][k] for j in week_days for k in K_shifts) <= 1,
+                    f"MaxOvertimePerWeek_{i}_week{week}"
+                )
+            
+            # Remainder days (if planning period is not exact weeks)
+            if remainder_days > 0:
+                remainder_start = num_weeks * 7 + 1
+                remainder_days_list = [d for d in J_days if d >= remainder_start]
+                
+                prob += (
+                    pulp.lpSum(so[i][j][k] for j in remainder_days_list for k in K_shifts) <= 1,
+                    f"MaxOvertimePerWeek_{i}_remainder"
+                )
+    
     # ============================================================================
-    # CONSTRAINT 8: Minimum Regular Shifts per Nurse (IF WORKING)
+    # CONSTRAINT 8: Regular Shift Quota (Paper vs NSS Logic)
     # ============================================================================
-    # Mathematical: Σⱼₖ sr_{ijk} ≥ n₃ · SR_i  ∀i ∈ I
-    # Meaning: IF a nurse works any shifts (SR_i=1), THEN they must work ≥ n₃ regular shifts
-    #          If a nurse doesn't work (SR_i=0), this constraint is 0 ≥ 0 (satisfied)
-    # Purpose: Ensures fair work distribution and job security for WORKING nurses only
+    # CONFIGURATION:
+    # 1. Paper Mode (allow_overtime_paradox=True):
+    #    Mathematical: Σⱼₖ sr_{ijk} ≥ n₃ · SR_i
+    #    Meaning: Minimum requirement only. Solver will prioritize cheaper regular shifts.
+    #    Result: "Overtime Paradox" (0 overtime used)
+    #
+    # 2. NSS Mode (allow_overtime_paradox=False):
+    #    Mathematical: Σⱼₖ sr_{ijk} == n₃ · SR_i
+    #    Meaning: Strict quota. Identify exactly n3 shifts as "Regular".
+    #    Result: Forces model to use Overtime for any extra work.
     # ============================================================================
     for i in I_nurses:
-        prob += (
-            pulp.lpSum(sr[i][j][k] for j in J_days for k in K_shifts) >= n3 * SR[i],
-            f"MinRegularShifts_{i}"
-        )
+        if allow_overtime_paradox:
+             # Paper Mode: Minimum constraint (allows cheap regular shifts to dominate)
+             prob += (
+                pulp.lpSum(sr[i][j][k] for j in J_days for k in K_shifts) >= n3 * SR[i],
+                f"MinRegularShifts_{i}"
+            )
+        else:
+            # NSS Mode: Strict Equality (Forces overtime usage)
+            prob += (
+                pulp.lpSum(sr[i][j][k] for j in J_days for k in K_shifts) == n3 * SR[i],
+                f"StrictRegularQuota_{i}"
+            )
         
     # ============================================================================
     # CONSTRAINT 9: Minimum Complete Weekends Off (ADVANCED)
@@ -1156,190 +1211,133 @@ Suggested Solutions:
             # The (Eq 20) z[w] >= 0 is already handled by the variable's lowBound.
 
     # ============================================================================
-    # FATIGUE CONSTRAINTS (PWL APPROXIMATION)
+    # FATIGUE CONSTRAINTS (LFFR MODEL WITH RECOVERY)
     # ============================================================================
-    # These constraints implement the piecewise linear approximation of the
-    # exponential fatigue function F(t) = 1 - e^(-λt) from Jaber et al. (2013)
-    # using the SOS2 (Special Ordered Set of Type 2) technique.
-    #
-    # Reference:
+    # Implements the Learning-Forgetting-Fatigue-Recovery (LFFR) model from:
     #   Jaber, M.Y., Givi, Z.S., Neumann, W.P. (2013). Incorporating human fatigue
     #   and recovery into the learning–forgetting process. Applied Mathematical
     #   Modelling, 37(12-13), 7287-7299.
     #
-    # PWL Technique Reference:
-    #   Vielma, J.P., Ahmed, S., Nemhauser, G. (2010). Mixed-integer models for
-    #   nonseparable piecewise-linear optimization: unifying framework and extensions.
-    #   Operations Research, 58(2), 303-315.
+    # KEY INSIGHT: Fatigue accumulates during work but RECOVERS during rest!
+    # Previous bug: Fatigue accumulated monotonically → all shifts pushed to end
+    #
+    # NEW MODEL:
+    #   F[i][j] = F[i][j-1] × decay_factor + fatigue_increment_today
+    #   
+    #   Where:
+    #     - decay_factor = e^(-μ' × rest_hours)  [recovery during rest]
+    #     - fatigue_increment = λ × shift_duration × worked_today
+    #     - λ = fatigue accumulation rate (0.03 default)
+    #     - μ' = recovery rate (0.05 default, faster than fatigue)
+    #
+    # This allows scheduling across the ENTIRE horizon, not just at the end!
     # ============================================================================
     
     if patient_safety_enabled:
         J_days_sorted = sorted(list(J_days))
         
+        # Pre-calculate decay factors for linearization
+        # When nurse works today: 12 hours between shifts → partial recovery
+        decay_work = np.exp(-recovery_mu * rest_hours_between)  # e.g., e^(-0.05 × 12) ≈ 0.55
+        # When nurse is OFF today: 24 hours rest → full recovery  
+        decay_off = np.exp(-recovery_mu * rest_hours_off)  # e.g., e^(-0.05 × 24) ≈ 0.30
+        
+        # Fatigue increment per shift (simplified linear approximation for MIP)
+        # Using first-order Taylor: 1 - e^(-λt) ≈ λt for small λt
+        fatigue_per_shift = fatigue_lambda * shift_duration  # e.g., 0.03 × 12 = 0.36
+        
         # ========================================================================
-        # CONSTRAINT F1: Work Hours Accumulation
+        # CONSTRAINT F1: Fatigue Dynamics with Recovery (LFFR Model)
         # ========================================================================
-        # Mathematical: T[i][j] = T[i][j-1] + shift_duration × Σₖ (sr[i][j][k] + so[i][j][k])
-        #               T[i][1] = shift_duration × Σₖ (sr[i][1][k] + so[i][1][k])
+        # Mathematical:
+        #   F[i][j] = F[i][j-1] × decay + fatigue_increment × worked_today
+        #   
+        #   where decay depends on whether nurse worked today:
+        #     - Worked: decay = e^(-μ' × 12)  (only 12h rest between shifts)
+        #     - OFF: decay = e^(-μ' × 24)  (full 24h rest)
         #
-        # Purpose: Track cumulative work hours for each nurse over the planning horizon
+        # Linearization for MIP:
+        #   Let w[i][j] = 1 if nurse i works on day j (any shift)
+        #   F[i][j] = F[i][j-1] × (decay_off + (decay_work - decay_off) × w[i][j])
+        #             + fatigue_per_shift × w[i][j]
         #
-        # Interpretation:
-        #   - T[i][j] = total hours worked by nurse i from day 1 to day j
-        #   - Each shift adds shift_duration hours (default 12 hours)
-        #   - Resets are not included (accumulates monotonically)
+        # Simplified (upper bound relaxation for tractability):
+        #   F[i][j] >= F[i][j-1] × decay_off + fatigue_per_shift × w[i][j]
+        #   F[i][j] <= F[i][j-1] × decay_work + fatigue_per_shift × w[i][j] + M(1-w[i][j])
+        #
+        # Even simpler (conservative): Use average decay for all cases
         # ========================================================================
+        
+        # Create work indicator: w[i][j] = 1 if nurse works any shift on day j
+        w = pulp.LpVariable.dicts("WorkDay",
+                                  (I_nurses, J_days),
+                                  cat=pulp.LpBinary)
+        
+        # Link w to actual shift assignments
+        for i in I_nurses:
+            for j in J_days:
+                # w[i][j] >= sr[i][j][k] + so[i][j][k] for all k
+                prob += (
+                    w[i][j] >= pulp.lpSum(sr[i][j][k] + so[i][j][k] for k in K_shifts) - 0.0001,
+                    f"WorkDay_Link1_{i}_{j}"
+                )
+                prob += (
+                    w[i][j] <= pulp.lpSum(sr[i][j][k] + so[i][j][k] for k in K_shifts),
+                    f"WorkDay_Link2_{i}_{j}"
+                )
+        
+        # Average decay factor (conservative approximation for MIP tractability)
+        # This is between decay_work and decay_off
+        avg_decay = (decay_work + decay_off) / 2  # ≈ 0.42
+        
         for i in I_nurses:
             for j_idx, j in enumerate(J_days_sorted):
                 if j_idx == 0:
-                    # First day: T = shift_duration × number of shifts worked
+                    # First day: F = fatigue from today's work only
                     prob += (
-                        T[i][j] == shift_duration * pulp.lpSum(sr[i][j][k] + so[i][j][k] for k in K_shifts),
-                        f"WorkHours_Init_{i}_{j}"
+                        F[i][j] == fatigue_per_shift * w[i][j],
+                        f"Fatigue_Init_{i}_{j}"
                     )
                 else:
-                    # Subsequent days: T[j] = T[j-1] + shift_duration × shifts worked today
+                    # Subsequent days: F[j] = F[j-1] × decay + new_fatigue
+                    # Use conditional decay based on whether working today
                     j_prev = J_days_sorted[j_idx - 1]
+                    
+                    # When working: less recovery (only 12h rest)
+                    # When OFF: more recovery (24h rest)
+                    # Linearize: F[j] = F[j-1] × (decay_off) + fatigue_per_shift × w[j]
+                    #                  + F[j-1] × (decay_work - decay_off) × w[j]
+                    # 
+                    # The last term is nonlinear (F × w), so we use auxiliary variable
+                    # For MIP tractability, use conservative bound:
+                    # F[j] >= F[j-1] × decay_off (minimum decay)
+                    # F[j] <= F[j-1] + fatigue_per_shift (maximum growth)
+                    
+                    # Auxiliary variable for F[j-1] × w[j] (McCormick envelope)
+                    fw = pulp.LpVariable(f"FW_{i}_{j}", lowBound=0, upBound=max_fatigue_threshold)
+                    
+                    M = max_fatigue_threshold  # Big-M
+                    
+                    # McCormick envelope for fw = F[j-1] × w[j]
+                    prob += fw <= M * w[i][j], f"McCormick1_{i}_{j}"
+                    prob += fw <= F[i][j_prev], f"McCormick2_{i}_{j}"
+                    prob += fw >= F[i][j_prev] - M * (1 - w[i][j]), f"McCormick3_{i}_{j}"
+                    
+                    # Fatigue dynamics:
+                    # F[j] = F[j-1] × decay_off + (decay_work - decay_off) × fw + fatigue_per_shift × w[j]
+                    delta_decay = decay_work - decay_off
+                    
                     prob += (
-                        T[i][j] == T[i][j_prev] + shift_duration * pulp.lpSum(sr[i][j][k] + so[i][j][k] for k in K_shifts),
-                        f"WorkHours_Accum_{i}_{j}"
+                        F[i][j] == F[i][j_prev] * decay_off + delta_decay * fw + fatigue_per_shift * w[i][j],
+                        f"Fatigue_Dynamics_{i}_{j}"
                     )
         
         # ========================================================================
-        # CONSTRAINT F2: PWL Convexity
-        # ========================================================================
-        # Mathematical: Σₛ λ[i][j][s] = 1  ∀i ∈ I, j ∈ J
-        #
-        # Purpose: Ensure PWL weights form a valid convex combination
-        #
-        # Interpretation:
-        #   - The SOS2 weights must sum to exactly 1
-        #   - This ensures the interpolation is properly normalized
-        #   - Standard requirement for PWL approximations
-        # ========================================================================
-        for i in I_nurses:
-            for j in J_days:
-                prob += (
-                    pulp.lpSum(pwl_lambda[i, j]) == 1,
-                    f"PWL_Convexity_{i}_{j}"
-                )
-        
-        # ========================================================================
-        # CONSTRAINT F3: PWL Work Hours Definition
-        # ========================================================================
-        # Mathematical: T[i][j] = Σₛ λ[i][j][s] × breakpoints[s]
-        #
-        # Purpose: Link cumulative work hours to PWL interpolation points
-        #
-        # Interpretation:
-        #   - T[i][j] is expressed as a convex combination of breakpoint values
-        #   - Combined with SOS2, this ensures T lies on the PWL curve
-        #   - breakpoints = [0, 6, 12, 18, 24, 30, 36, 42, 48] hours
-        # ========================================================================
-        for i in I_nurses:
-            for j in J_days:
-                prob += (
-                    T[i][j] == pulp.lpSum(pwl_lambda[i, j][s] * breakpoints[s] 
-                                         for s in range(len(breakpoints))),
-                    f"PWL_WorkHours_{i}_{j}"
-                )
-        
-        # ========================================================================
-        # CONSTRAINT F4: PWL Fatigue Definition
-        # ========================================================================
-        # Mathematical: F[i][j] = Σₛ λ[i][j][s] × exact_values[s]
-        #
-        # Purpose: Calculate fatigue as PWL approximation of F(T) = 1 - e^(-λT)
-        #
-        # Interpretation:
-        #   - F[i][j] is expressed as convex combination of exact exponential values
-        #   - exact_values[s] = 1 - exp(-λ × breakpoints[s])
-        #   - This achieves <0.1% error with 8 segments vs exact exponential
-        # ========================================================================
-        for i in I_nurses:
-            for j in J_days:
-                prob += (
-                    F[i][j] == pulp.lpSum(pwl_lambda[i, j][s] * exact_values[s] 
-                                         for s in range(len(exact_values))),
-                    f"PWL_Fatigue_{i}_{j}"
-                )
-        
-        # ========================================================================
-        # CONSTRAINT F5: SOS2 Constraint
-        # ========================================================================
-        # Mathematical: At most 2 consecutive λ[i][j][s] can be nonzero
-        #
-        # Purpose: Enforce piecewise linear interpolation property
-        #
-        # Interpretation:
-        #   - SOS2 (Special Ordered Set of Type 2) constraint
-        #   - Only adjacent segments can have nonzero weights
-        #   - Example: λ[2] and λ[3] can both be nonzero, but not λ[1] and λ[5]
-        #   - This ensures the solution lies on a single linear segment
-        #
-        # Implementation:
-        #   PuLP doesn't have native SOS2 support, so we use binary variables
-        #   to enforce the adjacency property:
-        #   - y[s] = 1 if segment s is active
-        #   - At most 2 consecutive y[s] can be 1
-        #   - λ[s] can be nonzero only if y[s-1] or y[s] is 1
-        # ========================================================================
-        for i in I_nurses:
-            for j in J_days:
-                # Create binary segment indicators
-                num_segments = len(breakpoints) - 1  # 8 segments
-                y_segment = [pulp.LpVariable(f"SOS2_Segment_{i}_{j}_{s}", cat=pulp.LpBinary)
-                            for s in range(num_segments)]
-                
-                # At most 2 consecutive segments can be active
-                prob += (
-                    pulp.lpSum(y_segment) <= 2,
-                    f"SOS2_MaxTwo_{i}_{j}"
-                )
-                
-                # Link λ weights to segment indicators
-                # λ[0] can be nonzero if segment 0 is active
-                prob += (
-                    pwl_lambda[i, j][0] <= y_segment[0],
-                    f"SOS2_Link_{i}_{j}_0"
-                )
-                
-                # λ[s] for s=1..num_segments-1 can be nonzero if segment s-1 or s is active
-                for s in range(1, num_segments):
-                    prob += (
-                        pwl_lambda[i, j][s] <= y_segment[s-1] + y_segment[s],
-                        f"SOS2_Link_{i}_{j}_{s}"
-                    )
-                
-                # λ[num_segments] (last breakpoint) can be nonzero if last segment is active
-                prob += (
-                    pwl_lambda[i, j][num_segments] <= y_segment[num_segments - 1],
-                    f"SOS2_Link_{i}_{j}_{num_segments}"
-                )
-                
-                # Consecutive segments only: if y[s] and y[t] are both 1, then |s-t| ≤ 1
-                for s in range(num_segments):
-                    for t in range(s + 2, num_segments):  # Gap of 2+ segments
-                        prob += (
-                            y_segment[s] + y_segment[t] <= 1,
-                            f"SOS2_Consecutive_{i}_{j}_{s}_{t}"
-                        )
-        
-        # ========================================================================
-        # CONSTRAINT F6: Maximum Fatigue Threshold
+        # CONSTRAINT F2: Maximum Fatigue Threshold
         # ========================================================================
         # Mathematical: F[i][j] ≤ F_max  ∀i ∈ I, j ∈ J
         #
-        # Purpose: Enforce safety limit on cumulative fatigue
-        #
-        # Interpretation:
-        #   - F_max = 0.70 (default 70% fatigue limit from Jaber et al.)
-        #   - Prevents unsafe working conditions
-        #   - Based on occupational safety research showing 70% fatigue
-        #     significantly increases error rates
-        #
-        # Note: This is already enforced by variable upper bound (upBound=F_max)
-        # but we add explicit constraint for clarity and solver performance
+        # Purpose: Enforce safety limit on fatigue level
         # ========================================================================
         for i in I_nurses:
             for j in J_days:
@@ -1875,21 +1873,28 @@ def generate_sample_data(num_nurses: int = 10, num_days: int = 14, num_scenarios
     # Generate demand scenarios
     scenario_data = []
     
+    # Base demand as percentage of nurse pool size (derived from typical hospital patterns)
+    # This ensures demand scales appropriately with the number of available nurses
+    # Rationale: At any given shift, only a fraction of nurses are on duty
+    # E.g., with 20 nurses and 4 shifts/day, ~25% work each shift on average
+    base_demand_pct = {
+        'E': 0.25,  # 25% of nurses for Early shift (morning handover, procedures)
+        'D': 0.30,  # 30% of nurses for Day shift (peak patient activity)
+        'L': 0.25,  # 25% of nurses for Late shift (evening care)
+        'N': 0.15   # 15% of nurses for Night shift (reduced activity)
+    }
+    
     for scenario in range(1, num_scenarios + 1):
         for day in range(1, num_days + 1):
             for shift in shifts:
-                # Base demand with some randomness
-                base_demand = {
-                    'E': 3,
-                    'D': 4,
-                    'L': 3,
-                    'N': 2
-                }
+                # Calculate base demand from nurse pool size
+                base = max(1, int(num_nurses * base_demand_pct[shift]))
                 
-                # Add variability
-                demand = max(1, base_demand[shift] + np.random.randint(-1, 2))
+                # Add stochastic variation: ±15% random fluctuation (paper methodology)
+                variation = np.random.uniform(-0.15, 0.15)
+                demand = max(1, int(base * (1 + variation)))
                 
-                # Weekend adjustments
+                # Weekend adjustment: 80% of weekday demand
                 if day % 7 in [0, 6]:  # Weekend
                     demand = max(1, int(demand * 0.8))
                 
@@ -2312,7 +2317,7 @@ def get_default_params():
         'n2': 5,          # Max night shifts
         'n3': 10,         # Min regular shifts
         'sigma': 0.95,    # CVaR confidence level
-        'mu': 5.0,        # Max acceptable shortage
+        'mu': 50.0,       # Max acceptable shortage (CVaR threshold)
         
         # Advanced constraints (NEW for university project)
         'n4': 0,          # Min complete weekends off (0 = disabled)
@@ -2322,10 +2327,11 @@ def get_default_params():
         'min_consecutive_nights': 2,  # Minimum consecutive night shifts
         'days_off_after_nights': 2,   # Days off required after night sequence
         
-        # Fatigue modeling parameters (Jaber et al. 2013)
+        # Fatigue modeling parameters (Jaber et al. 2013 - LFFR Model)
         'patient_safety_enabled': False,     # Enable/disable fatigue constraints
         'patient_safety_weight': 50.0,       # c_safety: Cost per fatigue unit ($)
         'fatigue_lambda': 0.03,              # λ: Fatigue rate from Jaber Table 5 (medium)
+        'recovery_mu': 0.05,                 # μ': Recovery rate (faster than fatigue rate)
         'max_fatigue_threshold': 0.70,       # F_max: Safety limit (0-1 scale, 0.70 = danger zone)
         'shift_duration': 12,                # Hours per shift (standard hospital shift)
     }
