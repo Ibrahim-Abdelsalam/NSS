@@ -78,8 +78,18 @@ def get_status(value: float, kpi_name: str, lower_is_better: bool = True) -> str
 # KPI CALCULATION FUNCTIONS
 # =============================================================================
 
+# =============================================================================
+# KPI CALCULATION FUNCTIONS
+# =============================================================================
+
 def calculate_demand_coverage(assigned_shifts: int, total_demand: int) -> Tuple[float, str]:
-    """Calculate demand coverage percentage."""
+    """
+    Calculate demand coverage percentage.
+    
+    Formula: (Regular + Overtime) / Total Demand * 100
+    Meaning: What % of patient needs are met by planned staff?
+    Goal: 100% (High is Good)
+    """
     if total_demand == 0:
         return 100.0, '🟢 Good'
     value = (assigned_shifts / total_demand) * 100
@@ -87,7 +97,13 @@ def calculate_demand_coverage(assigned_shifts: int, total_demand: int) -> Tuple[
 
 
 def calculate_understaffing_rate(emergency_shifts: int, total_shifts: int) -> Tuple[float, str]:
-    """Calculate understaffing rate (reliance on emergency staff)."""
+    """
+    Calculate reliance on emergency staff.
+    
+    Formula: Emergency Shifts / Total Shifts * 100
+    Meaning: How dependent are we on expensive outside help?
+    Goal: 0% (Low is Good)
+    """
     if total_shifts == 0:
         return 0.0, '🟢 Good'
     value = (emergency_shifts / total_shifts) * 100
@@ -95,7 +111,13 @@ def calculate_understaffing_rate(emergency_shifts: int, total_shifts: int) -> Tu
 
 
 def calculate_overtime_ratio(overtime_shifts: int, regular_shifts: int) -> Tuple[float, str]:
-    """Calculate overtime to regular shift ratio."""
+    """
+    Calculate overtime usage ratio.
+    
+    Formula: Overtime Shifts / Regular Shifts * 100
+    Meaning: For every 100 regular shifts, how many overtime shifts?
+    Goal: < 10% (Low is Good)
+    """
     if regular_shifts == 0:
         return 0.0, '🟢 Good'
     value = (overtime_shifts / regular_shifts) * 100
@@ -103,7 +125,13 @@ def calculate_overtime_ratio(overtime_shifts: int, regular_shifts: int) -> Tuple
 
 
 def calculate_cost_per_shift(total_cost: float, total_shifts: int) -> Tuple[float, str]:
-    """Calculate average cost per shift."""
+    """
+    Calculate economic efficiency.
+    
+    Formula: Total Cost / Total Shifts
+    Meaning: Average price to staff one shift (blended rate).
+    Goal: Close to Regular Wage ($100)
+    """
     if total_shifts == 0:
         return 0.0, '⚪ N/A'
     value = total_cost / total_shifts
@@ -111,7 +139,13 @@ def calculate_cost_per_shift(total_cost: float, total_shifts: int) -> Tuple[floa
 
 
 def calculate_fatigue_rate(fatigue_values: List[float], threshold: float = 0.5) -> Tuple[float, str]:
-    """Calculate percentage of nurse-days with high fatigue."""
+    """
+    Calculate high-risk fatigue prevalence.
+    
+    Formula: Count(F > Threshold) / Total Count * 100
+    Meaning: % of shifts performed by "tired" nurses.
+    Goal: 0%
+    """
     if not fatigue_values:
         return 0.0, '🟢 Good'
     high_fatigue_count = sum(1 for f in fatigue_values if f > threshold)
@@ -120,7 +154,13 @@ def calculate_fatigue_rate(fatigue_values: List[float], threshold: float = 0.5) 
 
 
 def calculate_avg_fatigue(fatigue_values: List[float]) -> Tuple[float, str]:
-    """Calculate average fatigue across all nurse-days."""
+    """
+    Calculate average team fatigue.
+    
+    Formula: Σ F_ij / Total Shifts
+    Meaning: Average tiredness level (0=Fresh, 1=Exhausted).
+    Goal: < 0.3
+    """
     if not fatigue_values:
         return 0.0, '🟢 Good'
     value = sum(fatigue_values) / len(fatigue_values)
@@ -128,7 +168,13 @@ def calculate_avg_fatigue(fatigue_values: List[float]) -> Tuple[float, str]:
 
 
 def calculate_max_fatigue(fatigue_values: List[float]) -> Tuple[float, str]:
-    """Calculate maximum fatigue level."""
+    """
+    Calculate worst-case fatigue.
+    
+    Formula: Max(F_ij)
+    Meaning: How tired was the *most tired* nurse?
+    Goal: < 0.5
+    """
     if not fatigue_values:
         return 0.0, '🟢 Good'
     value = max(fatigue_values)
@@ -136,7 +182,13 @@ def calculate_max_fatigue(fatigue_values: List[float]) -> Tuple[float, str]:
 
 
 def calculate_workload_balance(shifts_per_nurse: List[int]) -> Tuple[float, str]:
-    """Calculate workload balance (std dev of shifts per nurse)."""
+    """
+    Calculate fairness (Standard Deviation).
+    
+    Formula: σ = sqrt( Σ(x - μ)² / N )
+    Meaning: How unequal are the shift counts? 
+    Goal: Low (e.g., < 2 means everyone works similar hours)
+    """
     if not shifts_per_nurse or len(shifts_per_nurse) < 2:
         return 0.0, '🟢 Good'
     value = np.std(shifts_per_nurse)
