@@ -1750,7 +1750,8 @@ then handle excess demand with more expensive but flexible emergency staff.
             'avg_work_hours': avg_work_hours,
             'fatigue_lambda': model_params.get('fatigue_lambda', 0.03),
             'max_fatigue_threshold': model_params.get('max_fatigue_threshold', 0.70),
-            'shift_duration': model_params.get('shift_duration', 12)
+            'shift_duration': model_params.get('shift_duration', 12),
+            'raw_values': fatigue_values # Include raw values for KPI calculation
         }
         
         # Add fatigue columns to roster_df
@@ -1782,7 +1783,16 @@ then handle excess demand with more expensive but flexible emergency staff.
         "scenario_df": scenario_df,
         "coverage_df": coverage_df,
         "solution_explanation": explanation,
-        "fatigue_metrics": fatigue_metrics
+        "fatigue_metrics": fatigue_metrics,
+        "kpi_metadata": {
+            "regular_shifts": int(total_regular_shifts),
+            "overtime_shifts": int(total_overtime_shifts),
+            "emergency_shifts": float(scenario_df['shortage_shifts'].mean()),
+            "total_demand": float(scenarios_df.groupby('scenario')['demand'].sum().mean()),
+            "total_cost": float(total_cost),
+            "fatigue_values": fatigue_values if patient_safety_enabled else [],
+            "shifts_per_nurse": roster_df["Total_Shifts"].tolist()
+        }
     }
 
 

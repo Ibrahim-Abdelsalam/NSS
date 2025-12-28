@@ -9,6 +9,7 @@ import model_2  as m  # Back to using the unified model
 from io import BytesIO
 import json
 import base64
+import kpi
 from solver_config import get_available_solvers, recommend_solver, get_installation_instructions
 
 # --- 1. PAGE CONFIGURATION ---
@@ -1059,45 +1060,10 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
         st.info("🎓 **Advanced Constraints Enabled:**\n" + "\n".join(f"- {item}" for item in advanced_enabled))
         st.warning("⚠️ Advanced constraints may increase solve time and reduce feasibility. If solver fails, try relaxing some constraints.")
     
-    # ============================================================================
-    # PROBLEM SIZE ESTIMATION
-    # ============================================================================
-    st.markdown("### 📊 Problem Size & Estimated Solve Time")
-    
-    estimation = m.estimate_solve_time(nurses_list, scenarios_df, model_params)
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.metric(
-            "Decision Variables",
-            f"{estimation['num_variables']:,}",
-            help="Total number of decision variables in the optimization model"
-        )
-        st.caption(f"**Dimensions:** {estimation['num_nurses']} nurses × {estimation['num_days']} days × {estimation['num_shifts']} shifts × {estimation['num_scenarios']} scenarios")
-    
-    with col2:
-        st.metric(
-            "Constraints",
-            f"{estimation['num_constraints']:,}",
-            help="Estimated number of constraints"
-        )
-        st.caption(f"**Complexity:** {estimation['time_category']}")
-    
-    with col3:
-        st.metric(
-            "Problem Size",
-            estimation['time_category'],
-            help="Overall problem complexity (Fast / Medium / Slow)"
-        )
-    
-    st.markdown("")  # Spacing
+    # Solve
     
     # Solve
-    problem_size = len(nurses_list) * len(scenarios_df['day'].unique()) * len(scenarios_df['scenario'].unique())
     
-    if problem_size > 5000:
-        st.info(f"⚠️ Large problem detected ({len(nurses_list)} nurses × {len(scenarios_df['day'].unique())} days × {len(scenarios_df['scenario'].unique())} scenarios). Solver may find a near-optimal solution (within 5%) for faster results.")
     
     # Enhanced progress indicator
     progress_placeholder = st.empty()
@@ -1332,24 +1298,7 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
             col1, col2 = st.columns(2)
             
             with col1:
-                st.markdown("#### 📊 Problem Size")
-                st.info(f"""
-                - **Nurses:** {num_nurses}
-                - **Days:** {num_days}  
-                - **Scenarios:** {num_scenarios}
-                - **Total Capacity:** {total_capacity} shifts ({num_nurses} × {n1})
-                """)
-                
-                if max_daily_demand > total_capacity:
-                    st.error(f"⚠️ **Max daily demand ({max_daily_demand:.0f}) exceeds capacity ({total_capacity})!**")
-            
-            
-            # Additional Constraints
-            # Additional Constraints
-            st.markdown("### �️ Constraints")
-            
-            with col2:
-                st.markdown("#### �💼 Demand vs Capacity")
+                st.markdown("#### 💼 Demand vs Capacity")
                 utilization = avg_demand / total_capacity * 100 if total_capacity > 0 else 0
                 st.info(f"""
                 - **Average Total Demand:** {avg_demand:.0f} shifts/scenario
@@ -1357,6 +1306,9 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
                 - **Max Daily Demand:** {max_daily_demand:.0f} shifts/day
                 - **Utilization:** {utilization:.1f}%
                 """)
+                
+                if max_daily_demand > total_capacity:
+                    st.error(f"⚠️ **Max daily demand ({max_daily_demand:.0f}) exceeds capacity ({total_capacity})!**")
                 
                 st.markdown("#### ⚙️ Constraint Tightness")
                 st.info(f"""
@@ -1493,53 +1445,76 @@ if st.session_state.results is not None:
     else:
         avg_demand_per_scenario = 0
     
-    total_assigned = results['cost_breakdown']['total_regular_shifts'] + results['cost_breakdown']['total_overtime_shifts']
-    
+    # Calculate advanced KPIs using the kpi.py module
+    kpi_data = results.get('kpi_metadata', {})
+    if kpi_data:
+        calculated_kpis = kpi.calculate_all_kpis(
+            regular_shifts=kpi_data.get('regular_shifts', 0),
+            overtime_shifts=kpi_data.get('overtime_shifts', 0),
+            emergency_shifts=kpi_data.get('emergency_shifts', 0),
+            total_demand=kpi_data.get('total_demand', 1),
+            total_cost=kpi_data.get('total_cost', 0),
+            fatigue_values=kpi_data.get('fatigue_values', []),
+            shifts_per_nurse=kpi_data.get('shifts_per_nurse', [])
+        )
+    else:
+        calculated_kpis = {}
+
     col1, col2, col3, col4, col5 = st.columns(5)
     
     with col1:
+        cost_status = calculated_kpis.get('Cost Per Shift', {}).get('status', '')
         st.metric(
-            "Total Cost",
+            f"{cost_status} Total Cost",
             f"${results['cost_breakdown']['total_cost']:,.0f}",
-            help="Total optimization cost"
+            help=f"Total optimization cost. {calculated_kpis.get('Cost Per Shift', {}).get('value', '')} per shift."
         )
     
     with col2:
+        coverage_status = calculated_kpis.get('Demand Coverage', {}).get('status', '')
         st.metric(
-            "Total Demand",
-            f"{avg_demand_per_scenario:.0f}",
-            help="Average total demand per scenario (sum of all day-shift requirements)"
+            f"{coverage_status} Demand Coverage",
+            f"{calculated_kpis.get('Demand Coverage', {}).get('value', '0%')}",
+            help="What % of patient needs are met by planned staff (Regular + Overtime)?"
         )
     
     with col3:
+        ot_status = calculated_kpis.get('Overtime Ratio', {}).get('status', '')
         st.metric(
-            "Assigned Shifts",
-            int(total_assigned),
-            help="Total shifts assigned (regular + overtime)"
+            f"{ot_status} Overtime Ratio",
+            f"{calculated_kpis.get('Overtime Ratio', {}).get('value', '0%')}",
+            help="Ratio of overtime shifts to regular shifts."
         )
     
     with col4:
-        if nurses_list and model_params.get('n1'):
-            max_capacity = len(nurses_list) * model_params['n1']
-            capacity_utilization = (total_assigned / max_capacity) * 100
-            help_text = f"Utilization: {total_assigned} / {max_capacity} max shifts"
-        else:
-            capacity_utilization = 0
-            help_text = "Capacity utilization"
-        
+        understaff_status = calculated_kpis.get('Understaffing Rate', {}).get('status', '')
         st.metric(
-            "Capacity Used",
-            f"{capacity_utilization:.1f}%",
-            help=help_text
+            f"{understaff_status} Understaffing",
+            f"{calculated_kpis.get('Understaffing Rate', {}).get('value', '0%')}",
+            help="Reliance on emergency staff. Percentage of total shifts that are emergency recourse."
         )
     
     with col5:
-        avg_shortage = results['scenario_df']['shortage_shifts'].mean()
+        balance_status = calculated_kpis.get('Workload Balance', {}).get('status', '')
         st.metric(
-            "Avg. Shortage",
-            f"{avg_shortage:.1f}",
-            help="Average emergency staff needed per scenario"
+            f"{balance_status} Workload Balance",
+            f"{calculated_kpis.get('Workload Balance', {}).get('value', 'N/A')}",
+            help="Fairness metric (Standard Deviation of shifts per nurse). Lower is better."
         )
+
+    # Secondary metrics for Fatigue if enabled
+    if results.get('fatigue_metrics', {}).get('enabled'):
+        st.write("---")
+        f_col1, f_col2, f_col3 = st.columns(3)
+        with f_col1:
+            f_rate_status = calculated_kpis.get('Fatigue Rate', {}).get('status', '')
+            st.metric(f"{f_rate_status} High Fatigue Rate", calculated_kpis.get('Fatigue Rate', {}).get('value', '0%'))
+        with f_col2:
+            f_avg_status = calculated_kpis.get('Avg Fatigue', {}).get('status', '')
+            st.metric(f"{f_avg_status} Average Fatigue", calculated_kpis.get('Avg Fatigue', {}).get('value', '0'))
+        with f_col3:
+            f_max_status = calculated_kpis.get('Max Fatigue', {}).get('status', '')
+            st.metric(f"{f_max_status} Peak Fatigue", calculated_kpis.get('Max Fatigue', {}).get('value', '0'))
     
     st.divider()
     
@@ -2275,6 +2250,40 @@ if st.session_state.results is not None:
             ('GRID', (0, 0), (-1, -1), 0.5, colors.grey)
         ]))
         story.append(financial_table)
+        story.append(Spacer(1, 0.15*inch))
+        
+        # Solution Quality KPIs (NEW)
+        story.append(Paragraph("SOLUTION QUALITY KPIs", heading_style))
+        kpi_data = results.get('kpi_metadata', {})
+        if kpi_data:
+            calculated_kpis = kpi.calculate_all_kpis(
+                regular_shifts=kpi_data.get('regular_shifts', 0),
+                overtime_shifts=kpi_data.get('overtime_shifts', 0),
+                emergency_shifts=kpi_data.get('emergency_shifts', 0),
+                total_demand=kpi_data.get('total_demand', 1),
+                total_cost=kpi_data.get('total_cost', 0),
+                fatigue_values=kpi_data.get('fatigue_values', []),
+                shifts_per_nurse=kpi_data.get('shifts_per_nurse', [])
+            )
+            
+            kpi_rows = [['KPI Name', 'Value', 'Status']]
+            for name, data in calculated_kpis.items():
+                kpi_rows.append([name, data['value'], data['status']])
+            
+            kpi_table = Table(kpi_rows, colWidths=[2*inch, 1.25*inch, 1.25*inch])
+            kpi_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, -1), 9),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#ecf0f1')])
+            ]))
+            story.append(kpi_table)
+        else:
+            story.append(Paragraph("KPI data unavailable.", styles['Normal']))
+        
         story.append(Spacer(1, 0.15*inch))
         
         # Staffing Summary
