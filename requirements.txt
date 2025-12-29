@@ -1,6 +1,6 @@
 # Core optimization
 pulp>=2.7.0
-highspy>=1.5.0 
+# highspy>=1.5.0 
 
 # Data manipulation
 pandas>=2.0.0

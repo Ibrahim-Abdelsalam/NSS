@@ -214,7 +214,32 @@ st.markdown("""
         border-right: 1px solid #e2e8f0;
     }
 
+    /* Force dark text for all sidebar elements to ensure visibility */
+    [data-testid="stSidebar"] h1,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3, 
+    [data-testid="stSidebar"] span, 
+    [data-testid="stSidebar"] label, 
+    [data-testid="stSidebar"] p, 
+    [data-testid="stSidebar"] div,
+    [data-testid="stSidebar"] li {
+        color: #0f172a !important;
+    }
+    
+    /* Exception: Keep primary button text white */
+    [data-testid="stSidebar"] button[kind="primary"] p,
+    [data-testid="stSidebar"] button[kind="primary"] span,
+    [data-testid="stSidebar"] button[kind="primary"] div {
+        color: #ffffff !important;
+    }
+
     [data-testid="stSidebar"] label[data-testid="stWidgetLabel"] {
+        color: #0f172a !important;
+        font-weight: 600 !important;
+    }
+    
+    /* Fix Expander Headers in Sidebar */
+    [data-testid="stSidebar"] div[data-testid="stExpander"] > details > summary {
         color: #0f172a !important;
     }
     
