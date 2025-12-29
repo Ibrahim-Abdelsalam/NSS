@@ -34,14 +34,25 @@ st.markdown("""
         --hover-gradient: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%);
         --bg-color: #f8fafc;
         --card-bg: #ffffff;
-        --text-primary: #1e293b;
-        --text-secondary: #64748b;
+        --text-primary: #0f172a; /* Darker slate for better visibility */
+        --text-secondary: #334155; /* Higher contrast slate */
     }
 
-    html, body, [class*="css"] {
+    html, body, [class*="css"], [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
         font-family: 'Outfit', sans-serif;
-        color: var(--text-primary);
-        background-color: var(--bg-color);
+        color: var(--text-primary) !important;
+        background-color: var(--bg-color) !important;
+    }
+    
+    /* Ensure all labels and text are visible */
+    label[data-testid="stWidgetLabel"], .stMarkdown p, .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown span {
+        color: var(--text-primary) !important;
+        font-weight: 500 !important;
+    }
+
+    /* Force text color for Streamlit widgets */
+    .stTextInput p, .stNumberInput p, .stSelectbox p, .stRadio p {
+        color: var(--text-primary) !important;
     }
     
     /* Hero Section */
@@ -199,8 +210,12 @@ st.markdown("""
 
     /* Sidebar */
     [data-testid="stSidebar"] {
-        background-color: #f8fafc;
+        background-color: #ffffff !important;
         border-right: 1px solid #e2e8f0;
+    }
+
+    [data-testid="stSidebar"] label[data-testid="stWidgetLabel"] {
+        color: #0f172a !important;
     }
     
     /* Feature Cards - Gradient & Premium */
@@ -266,15 +281,15 @@ st.markdown("""
     
     .feature-title {
         font-size: 1.1rem;
-        font-weight: 600;
+        font-weight: 700; /* Bolder */
         margin-bottom: 0.5rem;
-        color: #1e293b;
+        color: #0f172a; /* Darker */
     }
     
     .feature-desc {
-        font-size: 0.9rem;
-        color: #64748b;
-        line-height: 1.5;
+        font-size: 0.95rem;
+        color: #334155; /* Darker for higher contrast */
+        line-height: 1.6;
     }
 
 
