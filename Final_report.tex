@@ -1,4 +1,4 @@
-\documentclass[10pt,a4paper]{article}
+\documentclass[10pt,a4paper,twocolumn]{article}
 % Packages
 \usepackage[utf8]{inputenc}
 \usepackage[english]{babel}
@@ -15,7 +15,8 @@
 \usepackage{url}
 \usepackage{xcolor}
 \usepackage{tocloft}
-\usepackage{multicol}
+\usepackage{microtype}
+
 \renewcommand{\cftdot}{}
 \usepackage[hidelinks]{hyperref}
 \hypersetup{
@@ -27,20 +28,24 @@
 }
 \renewcommand{\arraystretch}{1.2}
 % Page setup
-\geometry{left=0.5in, right=0.5in, top=0.5in, bottom=0.7in}
-\onehalfspacing
+\geometry{left=0.7in, right=0.7in, top=1in, bottom=1in}
+\setstretch{1.15}
+\raggedbottom
+\allowdisplaybreaks
 % Title formatting
 \titleformat{\section}{\large\bfseries}{\thesection}{1em}{}
 \titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{1em}{}
 % Document information
-\title{\textbf{Predictive-Stochastic Integration for Nurse Scheduling: A CVaR-Based Framework Under Demand Uncertainty}}
+\title{\textbf{FROST-NS \\Fatigue-aware Risk Optimization for Stochastic Task allocation in Nurse Scheduling}}
 \date{}
 \begin{document}
+\onecolumn
+
 \pagenumbering{roman}
 % Logo at the top
 \begin{figure}[t]
 \centering
-\includegraphics[width=0.7\textwidth]{small.png}
+\includegraphics[width=0.5\textwidth]{small.png}
 \end{figure}
 \maketitle
 \begin{center}
@@ -63,78 +68,23 @@ This is the placeholder for the abstract. The abstract provides a concise summar
 \textbf{Keywords:} Nurse Scheduling Problem, Optimization, Heuristics, Linear Programming, Healthcare Management
 \vspace{20pt}
 % ============================================================================
-
+\newpage
+\tableofcontents
 \newpage
 \pagenumbering{arabic}
+\twocolumn
 % Start two-column layout
-\begin{multicols}{2}
+
 % ============================================================================
 % SECTION 1: INTRODUCTION (MERGED FROM BACKGROUND & MOTIVATION)
 % ============================================================================
 \section{Introduction}
-The Nurse Scheduling Problem (NSP) is a complex, multidimensional optimization challenge in healthcare, focused on assigning nurses to rotating shifts (morning, evening, night) to ensure continuous, safe, and high-quality patient care. As hospitals operate 24/7, scheduling must balance operational efficiency with staff satisfaction and well-being. It is a human-centered problem that reconciles institutional goals—adequate staffing, skill mix, and legal work-hour compliance—with individual needs such as rest, fairness, and personal preferences [1]. 
-Recognizing nurses as essential professionals highlights that their well-being directly impacts patient safety and care quality. Poorly designed schedules can cause overstaffing or understaffing, fatigue, stress, and clinical errors, while equitable schedules enhance performance, morale, and retention [2]. The COVID-19 pandemic has further underscored the importance of adaptive, data-driven, and human-aware scheduling systems to support both operational efficiency and workforce resilience.
 
-The Nurse Scheduling Problem (NSP) goes far beyond numbers and reformulations, it seeps into the lives of people who are working in hospitals. Behind every roster are nurses working longer shifts, losing sleep and their own personal time for the sake of taking care of ill patients. When rosters are unfair or not well managed, nurses get tired, burned out, and stressed, and patients suffer the consequence with the risk of receiving less intensity or delayed treatment. 
-A good schedule can make a dramatic difference. It ensures equity, prevents burnout, and builds a healthier, more productive workforce. This also means safer hospitals with better patient care. But there are numerous healthcare facilities that remain mired in traditional paper-based processes that simply cannot respond to unanticipated time-off or changing needs. Getting the NSP solved isn't merely an optimization issue, it's making more human, more resilient healthcare systems. By designing more intelligent, more adaptable scheduling solutions, we design workplaces where nurses are valued and patients genuinely are cared for.
+Nurses and other healthcare staff are forced to work under constant stress conditions. In addition to the stress, nurses experience burnout and exhaustion, which also impacts healthcare. It should come as no surprise that when nurses work long hours and feel exhausted, the potential for errors increases. Unfortunately, hospital work schedules often have the detrimental effect of pushing existing exhausted healthcare staff to continue working. What makes this problem so difficult to solve is, of course, the nature of healthcare work in hospitals specifically. While most employment is limited to working hours that fit firmly within the constraint of working Monday to Friday, with weekends in between, and Monday and Friday as bookend days, hospitals never close and operate every day of every week.
 
-% ============================================================================
-% SECTION 2: LITERATURE REVIEW (RENAMED FROM PROBLEM STATEMENT)
-% ============================================================================
-\section{Literature Review}
+The Covid-19 pandemic has made one thing painfully obvious: traditional scheduling techniques simply don’t work. Most traditional models of patient scheduling presume that everything will go right, but a hospital simply isn’t a predictable environment. Patient needs are unexpected, employees come down with illnesses, and emergencies occur without notice. In such a situation, predictable approaches to patient scheduling will fail. Despite being known for several decades and having proven to be highly successful on a theoretical level, many hospitals to this day rely on outdated manual processing or simplified software solutions for optimization problems like linear programming that have not been designed for the real world of healthcare.
 
-\subsection{\textit{Traditional Optimization Models for Nurse Scheduling}}
-
-The Nurse Scheduling Problem (NSP) has been first considered a deterministic optimization problem where a nurse has to be assigned to different shifts within hospital rules and fairness requirements. Integer and linear programming techniques have first been developed to address NSP in order to find minimum costs and improve coverage efficiency [3], [4]. The traditional approaches assure mathematical consistency but remain complex for integrating hospital dynamics.
-
-The fairness and satisfaction formulation has more recently involved multi-objective and lexicographic goal programming approaches [9], [26]. On a different note, a fuzzy mathematical modeling technique to simulate uncertainty related to nurse preferences and shift constraints has been proposed in [8], making it a trustworthy surrogate for traditional methods. Later developments have added a mixed-integer linear programming formulation to address shift allocation over a few days to a longer term [11], [24]. Furthermore, a decision-support system has been enhanced for long-term shift allocation in large hospitals via a linear programming technique in [13]. Recently, some works, [28], have demonstrated better efficiency and more fairness in health services through a determination-based process via integer programming. Similarly in this category is [29], in which a fairness-based model for addressing work balance in a French hospital context has been developed.
-
-Although these deterministic tools are still valuable even in the current scenario, their assumptions were fixed patient demand and fixed staffing. The above-mentioned limitations caused stochastic and risk-based optimisation to arise.
-
-\subsection{\textit{Stochastic and Risk-Based Scheduling under Uncertainty}}
-
-Due to this variability in healthcare systems, stochastic optimization and risk approaches were generally pursued by most researchers. The earlier work of [1] proposed a Conditional Value-at-Risk (CVaR) model that minimized instances of critical under-staffing. Later on, [14] used CVaR in integrated nurse scheduling under patient demand uncertainty.
-
-Realistic implementations like [11] and [12] proved that stochastic programming and mixed-integer approaches enhanced reliability for actual hospital settings. Online stochastic approaches and rotation methods of branch-and-price were applied in [15], [17] to promote re-optimization on a daily basis as scenarios shift. Supporting works in literature like [16] showed quick response strategies for scheduling to boost hospital and patient satisfaction.
-
-Although all this has improved, a majority of stochastic models have relied on frozen probability distributions and not real-time predictive information. As a direct consequence of this and similar limitations in stochastic methods, there has been the development of techniques for hybrids and intelligence. There is a balance between algorithms' mathematical rigor and heuristics' flexibility.
-
-\subsection{\textit{Hybrid and Intelligent Optimization Techniques}}
-
-To address this complexity in NSP, researchers have since incorporated Metaheuristic techniques, Artificial Intelligence, and even a combination of techniques known as Hybrid Optimization. In earlier works, researchers exploited harmony search technology, Tabu Search Optimization, and Particle Swarm Optimization (PSO) to adequately search through large solution spaces [2], [5], [6].
-
-Later studies have incorporated techniques to leverage complementary capabilities. The works in [6, 7] and [23] coupled Genetic Algorithms with Tabu Search to enhance convergence and equity. The author in [10] proposed an adaptive Variable Neighbourhood Search for Constraint Satisfaction. In the age of COVID-19 pandemic challenges, a Salp Swarm Algorithm-GA has been proposed in [19] for emergency scheduling.
-
-Furthermore, integration through machine learning has also been achieved. Thus, in [21], deep neural networks were coupled with a heuristic that employs a Mixed Integer Programming formulation. On the other hand, in [20], a two-stage hybrid strategy that employs exact optimization and heuristic refinement for maximum coverage and fairness has been proposed.
-
-Human factor modeling led to improvements in hybrid approaches. In [22], an empirically validated model of sleep and fatigue was coupled to address the effect of circadian factors. In [26], dynamics for nurse satisfaction were introduced based on changing tastes. Although more advanced in computation and accuracy than heuristics, hybrid approaches were still reactive and made adjustments only after the event has passed. Yet this weakness has since been remedied.
-
-\subsection{\textit{Data-Driven and Dynamic Optimization Methods}}
-
-The new data-driven and dynamic optimization is certainly one of the more revolutionary developments in NSP literature to date. [30] created a predictive model for estimating a hospital's workload based on its regular hospital data. It is considered one of the first studies that have merged predictive machine-learning techniques and NSP.
-
-Utilizing dynamic flexibility, [31] proposed a dynamic model for multicriteria optimization that divided the global problem into sub-problems for each day and gradually changes the well-being factors of nurses. In a similar fashion, [27] developed a preventive and reactive scheduling strategy that forecasted staff absenteeism and adjusted shifts accordingly. Simulated annealing algorithms were used for complex real-world job rosters in [25], while [29] empirically analyzed a model for testing work balance in a French hospital. Dynamic integration for satisfaction and performance can also be found in [26][28], where equity and efficiency of operation are joined. Root adaptive algorithms like those in [18] (column generation methods) and in [13] still form a basis for all developments. Nevertheless, in spite of all this development, predictive integration is still a dream. Only [30] and hybrids [21] utilize predictive modeling in proactive scheduling. Dynamic approaches still principally revolve around Reactive Parameter Update and not Real-Time Predictions. There is a pressing need for predictive and stochastic integration.
-
-% ----------------------------------------------------------
-\section{Gap Analysis and Conceptual Framework}
-
-Despite advances in nurse scheduling optimization, existing methodologies exhibit critical limitations in simultaneously addressing predictive workload forecasting and risk-based decision-making under uncertainty. Literature reveals two distinct research streams with inherent constraints.
-
-The first stream (\textbf{predictive workload modeling}) forecasts nurse requirement using clinical and operational variables [1–6, 28]. These models exhibit good representation of temporal patterns in demand but deal with uncertainty deterministically without probabilistic safeguard and apply heuristic corrections unsuitable for stochastic hospital activity [23, 29]. The second stream (\textbf{risk-based stochastic optimization}) addresses understaffing through probabilistic models such as Conditional Value-at-Risk (CVaR) [5, 11, 14, 16–21]. While offering effective uncertainty regulation, methods rely on pre-specified distributions and static parameters that are unable to learn from dynamic real-time demand patterns [10, 14, 26], limiting their anticipatory capacity.
-
-This duality reveals a systematic gap: there is no overall framework integrating predictive analytics and stochastic optimisation for anticipation-driven forecasting and adaptive risk management. The proposed research fills this by a three-step data-driven, CVaR-controlled framework that:  
-(1) predicts demand for nurses from actual hospital information,  
-(2) produces probabilistic scenarios of demand, and  
-(3) optimises staff deployment with CVaR-constrained minimisation of worst-case understaffing risk.  
-
-By integrating dynamic workload forecasts [6] with CVaR-based optimization [5], this creates a closed-loop system dynamically responding to changes in demand. By such integration, scheduling decisions become anticipatory and risk-aware simultaneously, achieving proactive, equitable, and resilient nurse scheduling sensitive to operational uncertainty [14, 30] and human-centric performance [3, 25, 28], a paradigm shift from assumption-based, static scheduling to evidence-based, dynamic decision-making.
-\end{multicols}
-
-
-% ============================================================================
-% ADDED SECTIONS: METHODOLOGY, IMPLEMENTATION, RESULTS, CONCLUSIONS
-% ============================================================================
-\begin{multicols}{2}
+What this project hopes to do is turn that around. What we're proposing is a completely different way of doing nurse scheduling that takes uncertainty seriously and that incorporates nurse wellness as a central piece of the solution. Instead of considering fatigue as something that is secondary or an aside, it is incorporated centrally into our nurse scheduling tool because we know that exhausted nurses endanger themselves and their patients. At the same time, our method is also concerned with minimizing the worst case that may occur. By the use of sophisticated statistical methods, we aim to prevent some of the worst staffing outcomes from ever becoming reality before they occur. It is quite simple, but the aim is to produce nurse staffing patterns that are efficient, safe, and sound when the world is not going our way.
 
 \section{Problem Statement}
 
@@ -179,17 +129,48 @@ which static or deterministic scheduling paradigms are ill-equipped to respond. 
 all the relaxed and refined attempts at optimality, NSP remains a perplexing and challenging
 endeavor.
 
-\section{Methodology}
+% ============================================================================
+% SECTION 2: LITERATURE REVIEW (RENAMED FROM PROBLEM STATEMENT)
+% ============================================================================
+\section{Literature Review}
+The Nurse Scheduling Problem (NSP) has been widely studied within operations research due to its direct impact on healthcare efficiency, labor cost control, and quality of patient care. Hospitals operate in environments characterized by continuous service requirements, strict labor regulations, and highly variable patient demand. As a result, nurse scheduling models must balance operational efficiency with workforce well-being and patient safety.
 
+Deterministic Nurse Scheduling Models
+Early research on NSP modeled the problem as a deterministic optimization task under fixed demand assumptions. Linear Programming (LP), Integer Programming (IP), and Mixed-Integer Linear Programming (MILP) formulations were commonly used to minimize staffing costs while ensuring coverage feasibility and compliance with work regulations [3,4,12,28]. These approaches provide mathematically optimal solutions and clear constraint enforcement.
+To improve realism, several studies incorporated historical and operational data to better represent workload patterns and staffing needs [4,6,28]. However, uncertainty in patient demand and staff availability is still treated implicitly, typically through safety margins or heuristic adjustments rather than formal probabilistic modeling [23,29]. Consequently, deterministic models remain vulnerable to unexpected demand surges, emergency situations, and staff absences.
+
+To explicitly address uncertainty in healthcare operations, stochastic optimization approaches have been introduced for nurse scheduling. In stochastic programming, patient demand is represented through scenarios, allowing schedules to be evaluated across multiple possible realizations [9,15,21]. Two-stage stochastic formulations are particularly common, where a baseline schedule is determined before demand realization, followed by recourse actions—such as adding or canceling shifts once actual demand becomes known [9,15,16].
+A major advancement in this research stream is the application of Conditional Value-at-Risk (CVaR) to control understaffing risk. CVaR-based formulations limit the expected severity of worst-case understaffing scenarios and provide robust protection against extreme demand realizations [16,22,31]. Several studies demonstrate that incorporating CVaR significantly improves schedule robustness and service reliability compared to expectation-based stochastic models [11,14,16–21].
+Despite these advantages, most stochastic nurse scheduling models rely on pre-defined demand scenarios with fixed probability distributions derived from historical data [10,14,26]. These models primarily focus on system-level objectives such as cost minimization and coverage reliability, with limited attention to human-centered performance factors.
+
+Nurse fatigue has been identified as a critical factor influencing performance, safety, and quality of care. Long working hours, consecutive shifts, night duties, and insufficient recovery periods contribute to cumulative physical and cognitive fatigue, increasing the likelihood of errors and burnout [].
+Fatigue modeling has been studied in nurse rostering and personnel scheduling using cumulative, exponential, and recovery-based formulations []. These studies highlight the importance of explicitly limiting workload accumulation to protect nurse well-being and patient safety. However, fatigue constraints are rarely embedded directly into stochastic nurse scheduling models that already account for demand uncertainty. In most cases, fatigue is addressed indirectly through basic work-rest rules or maximum shift limits rather than being modeled as a continuous safety-related variable.
+
+Deterministic and data-informed models provide computational efficiency and transparent constraint handling, but they rely on fixed or implicitly adjusted demand assumptions and lack formal mechanisms for managing uncertainty. As a result, such models remain vulnerable to unexpected demand fluctuations and emergency situations commonly observed in hospital environments.
+
+Stochastic and risk-based approaches address this limitation by explicitly modeling uncertainty through scenario-based formulations. In particular, CVaR-based models have proven effective in controlling worst-case understaffing risk and improving schedule robustness under demand uncertainty [16]. However, these models primarily focus on system-level objectives such as cost minimization and coverage reliability. Human-centered considerations, especially cumulative nurse fatigue, are typically handled only through basic work rules or indirect constraints rather than being modeled explicitly within the stochastic optimization framework.
+
+In parallel, fatigue-focused studies emphasize the critical impact of cumulative workload, night shifts, and insufficient recovery on nurse performance and patient safety [10,25]. While these studies provide well-founded fatigue formulations, they are rarely integrated into stochastic nurse scheduling models that already account for demand uncertainty and risk. Consequently, fatigue is often treated as a secondary or post hoc consideration, rather than as a safety-critical constraint influencing scheduling decisions under uncertainty.
+
+In addition, existing integrated stochastic models commonly assume simplified or idealized formulations of work patterns and overtime. Certain practical implementation aspects—such as the interaction between regular and overtime assignments—are often under-specified in the literature, limiting the realism of overtime utilization in applied settings [16]. These modeling assumptions may lead to schedules that are theoretically sound but less representative of real hospital operations.
+
+Overall, the literature lacks a unified and operationally deployable framework that simultaneously captures patient demand uncertainty through stochastic optimization, controls worst-case understaffing risk using formal risk measures such as CVaR, and explicitly accounts for cumulative nurse fatigue as a safety-related factor within the scheduling model. This gap highlights the need for more integrated formulations that balance robustness, operational feasibility, and human-centered performance in nurse scheduling.
+
+Furthermore, an implementation gap in the overtime formulation of He et al. [16] was identified, where the absence of an upper bound on regular shifts prevents practical overtime usage despite its inclusion in the model variables. This work introduces explicit regular and overtime shift separation with configurable quota constraints, enabling realistic overtime utilization.
+To ensure robust parameter selection, a comprehensive parameter tuning study was conducted using a full factorial design (3×3×3×3), resulting in 2,430 optimization runs. The study evaluated fatigue accumulation rates, safety penalty weights, fatigue thresholds, and demand levels, demonstrating stable solver performance and balanced trade-offs between patient safety and computational efficiency.
+By integrating stochastic risk control, fatigue-aware constraints, and practical implementation refinements within a single decision-support system, this framework advances nurse scheduling toward more robust, realistic, and human-centered solutions.
+% ============================================================================
+% ADDED SECTIONS: METHODOLOGY, IMPLEMENTATION, RESULTS, CONCLUSIONS
+% ============================================================================
+\section{Methodology}
 \subsection{Problem Formulation}
 
 This proof-of-concept study addresses the integrated nurse staffing and scheduling problem under patient demand uncertainty, extending the foundational work of He, Chaussalet, and Qu (2019) [16]. The problem is formulated as a two-stage stochastic integer program with Conditional Value-at-Risk (CVaR) constraints. In the first stage, scheduling decisions are made before the realization of patient demand, establishing a baseline nurse roster. In the second stage, recourse actions are taken once the actual demand is observed, allowing for adjustments through emergency staff additions or shift cancellations. This prototype implementation demonstrates the feasibility of integrating risk-aware optimization with practical scheduling constraints.
-
 The planning horizon spans multiple days with multiple shift types per day, namely Early (E), Day (D), Late (L), and Night (N) shifts. Patient demand for nursing services is inherently uncertain and is modeled through a discrete set of scenarios, each representing a possible realization of demand across all days and shifts. The probability of each scenario is assumed to be equal, reflecting the epistemic uncertainty in demand forecasting.
-
 \subsection{Mathematical Model Formulation}
 
 \subsubsection{Sets and Indices:}
+\begin{small}
 \begin{align*}
 I &= \text{Set of nurses, indexed by } i \\
 J &= \text{Set of days in planning period, indexed by } j \\
@@ -200,6 +181,7 @@ K' &= \text{Unwanted shift patterns: } \{(D,E), (L,E), (L,D), (E,N)\}
 \end{align*}
 
 \subsubsection{Parameters:}
+\begin{small}
 \begin{align*}
 c_1 &= \text{Regular shift cost per shift} \\
 c_2 &= \text{Overtime shift cost per shift} \\
@@ -212,29 +194,26 @@ n_1 &= \text{Maximum total shifts per nurse} \\
 n_2 &= \text{Maximum night shifts per nurse} \\
 n_3 &= \text{Minimum regular shifts per nurse} \\
 n_4 &= \text{Minimum complete weekends off per nurse} \\
-R_{jk}^{\omega} &= \text{Demand for shift } k \text{ on day } j \text{ in scenario } \omega \\
-p^{\omega} &= \text{Probability of scenario } \omega \\
-\lambda &= \text{Fatigue accumulation rate} \\
-F_{max} &= \text{Maximum fatigue threshold} \\
-\sigma &= \text{CVaR confidence level} \\
-\mu &= \text{Maximum acceptable shortage threshold}
+\mu &= \text{Max acceptable shortage threshold}
 \end{align*}
+\end{small}
+
+% \begin{multicols}{2} % Removed multicol for math sections to avoid conflicts
 
 \subsubsection{First-Stage Decision Variables:}
+\begin{small}
 \begin{align*}
-sr_{ijk} &\in \{0,1\} : \text{1 if nurse } i \text{ works regular shift k} \\
-&\quad \text{ on day } j \\
-so_{ijk} &\in \{0,1\} : \text{1 if nurse } i \text{ works overtime shift k} \\
-&\quad  \text{ on day } j \\
-SR_i &\in \{0,1\} : \text{1 if nurse } i \text{works any regular shifts} \\
-SO_i &\in \{0,1\} : \text{1 if nurse } i \text{works any overtime shifts} \\
+sr_{ijk} &\in \{0,1\} : \text{Nurse } i \text{ works regular } k \text{ on day } j \\
+so_{ijk} &\in \{0,1\} : \text{Nurse } i \text{ works overtime } k \text{ on day } j \\
+SR_i &\in \{0,1\} : \text{Nurse } i \text{ works any regular shifts} \\
+SO_i &\in \{0,1\} : \text{Nurse } i \text{ works any overtime shifts} \\
 dev1_{ij} &\in \mathbb{Z}_+ : \text{Stand-alone shift deviation} \\
 dev2_{ijk} &\in \mathbb{Z}_+ : \text{Unwanted pattern deviation} \\
-F_{ij} &\in [0, F_{max}] : \text{Cumulative fatigue} \\
-&\quad \text{of nurse } i \text{ on day } j \\
-T_{ij} &\in \mathbb{R}_+ : \text{Cumulative work hours} \\
-&\quad \text{of nurse } i \text{ up to day } j
+F_{ij} &\in [0, F_{max}] : \text{Fatigue of nurse } i \text{ on day } j \\
+T_{ij} &\in \mathbb{R}_+ : \text{Work hours of nurse } i \text{ up to day } j
 \end{align*}
+\end{small}
+
 
 \subsubsection{Second-Stage Decision Variables:}
 \begin{align*}
@@ -250,16 +229,21 @@ T_{ij} &\in \mathbb{R}_+ : \text{Cumulative work hours} \\
 z^{\omega} &\in \mathbb{R}_+ : \text{Excess loss in scenario } \omega \text{ beyond VaR}
 \end{align*}
 
-\subsubsection{Objective Function:} Minimize the total expected cost:
+\subsubsection{Objective Function:} 
+Minimize the total expected cost:
 \begin{equation}
 \begin{aligned}
-\min \quad & c_1 \sum_{i,j,k} sr_{ijk} + c_2 \sum_{i,j,k} so_{ijk} \\
-& + c_3 \sum_{i,j} dev1_{ij} + c_4 \sum_{i,j,k} dev2_{ijk} \\
-& + c_{safety} \sum_{i,j} F_{ij} \\
-& + \sum_{\omega} p^{\omega} \left( q^+ \sum_{j,k} \alpha_{jk}^{\omega} + q^- \sum_{j,k} \beta_{jk}^{\omega} \right)
+\min \quad 
+& c_1 \sum_{i \in I}\sum_{j \in J}\sum_{k \in K} sr_{ijk} 
++ c_2 \sum_{i \in I}\sum_{j \in J}\sum_{k \in K} so_{ijk} \\
+& + c_3 \sum_{i \in I}\sum_{j \in J} dev1_{ij} 
++ c_4 \sum_{i \in I}\sum_{j \in J}\sum_{k \in K} dev2_{ijk} \\
+& + c_{\text{safety}} \sum_{i \in I}\sum_{j \in J} F_{ij} \\
+& + \sum_{\omega \in \Omega} p^{\omega} 
+   \sum_{j \in J}\sum_{k \in K} 
+   \left( q^+ \alpha_{jk}^{\omega} + q^- \beta_{jk}^{\omega} \right)
 \end{aligned}
 \end{equation}
-
 \subsection{Core Constraints}
 
 The base model incorporates several fundamental constraints. Each nurse works at most one shift per day:
@@ -269,7 +253,8 @@ The base model incorporates several fundamental constraints. Each nurse works at
 
 Each nurse works at most $n_1$ shifts across the planning period:
 \begin{equation}
-\sum_{j,k} (sr_{ijk} + so_{ijk}) \leq n_1 \quad \forall i \in I
+\sum_{j \in J}\sum_{k \in K} \left( sr_{ijk} + so_{ijk} \right) \leq n_1 
+\quad \forall i \in I
 \end{equation}
 
 Each nurse works at most $n_2$ night shifts:
@@ -277,9 +262,10 @@ Each nurse works at most $n_2$ night shifts:
 \sum_{j} (sr_{ijN} + so_{ijN}) \leq n_2 \quad \forall i \in I
 \end{equation}
 
-Each working nurse completes at least $n_3$ regular shifts:
+Each working nurse completes a specific number of $n_3$ regular shifts:
 \begin{equation}
-\sum_{j,k} sr_{ijk} \geq n_3 \cdot SR_i \quad \forall i \in I
+\sum_{j \in J}\sum_{k \in K} sr_{ijk} = n_3 \cdot SR_i 
+\quad \forall i \in I
 \end{equation}
 
 The demand fulfillment constraint links the first and second stages:
@@ -294,8 +280,27 @@ The CVaR constraint limits the expected loss in worst-case scenarios:
 
 The excess loss is defined by:
 \begin{equation}
-z^{\omega} \geq \sum_{j,k} \alpha_{jk}^{\omega} - \xi \quad \forall \omega \in \Omega
+z^{\omega} \geq \sum_{j \in J}\sum_{k \in K} \alpha_{jk}^{\omega} - \xi 
+\quad \forall \omega \in \Omega
 \end{equation}
+
+\subsubsection{Minimum Complete Weekends Off} An optional constraint ensuring nurses receive complete weekends off during the planning period:
+\begin{equation}
+W_{i,w} \leq 1 - \sum_{k \in K} \left( sr_{i,sat_w,k} + so_{i,sat_w,k} \right),
+\quad \forall i \in I, \; \forall w \in W
+\end{equation}
+
+\begin{equation}
+W_{i,w} \leq 1 - \sum_{k \in K} \left( sr_{i,sun_w,k} + so_{i,sun_w,k} \right),
+\quad \forall i \in I, \; \forall w \in W
+\end{equation}
+
+\begin{equation}
+\sum_{w \in W} W_{i,w} \geq n_4,
+\quad \forall i \in I
+\end{equation}
+
+where $W_{iw} \in \{0,1\}$ equals one if nurse $i$ has both Saturday and Sunday off in weekend $w$.
 
 \subsection{Project Contributions}
 
@@ -309,12 +314,7 @@ n_{k,min} \leq \sum_{j} (sr_{ijk} + so_{ijk}) \leq n_{k,max} \quad \forall i \in
 
 This ensures equitable distribution of desirable and less desirable shift types, promoting workforce satisfaction.
 
-\subsubsection{Minimum Complete Weekends Off} A constraint ensuring nurses receive complete weekends off during the planning period:
-\begin{equation}
-\sum_{w \in W} W_{iw} \geq n_4 \quad \forall i \in I
-\end{equation}
 
-where $W_{iw} \in \{0,1\}$ equals one if nurse $i$ has both Saturday and Sunday off in weekend $w$.
 
 \subsubsection{Night Shift Rest Requirements} Night shifts must occur in consecutive sequences of at least $n_5$ nights to prevent isolated shifts:
 \begin{equation}
@@ -330,17 +330,11 @@ for $m = 1, \ldots, n_6$, where $\phi_{ij}$ indicates a night sequence end.
 
 \subsubsection{Weekly Overtime Cap} A practical constraint limiting overtime to at most one shift per nurse per week:
 \begin{equation}
-\sum_{j \in J_w} \sum_{k} so_{ijk} \leq 1 \quad \forall i \in I, w \in W
+\sum_{j \in J_w} \sum_{k \in K} so_{ijk} \leq 1 
+\quad \forall i \in I, \; w \in W
 \end{equation}
 
 where $J_w \subseteq J$ denotes the set of days in week $w$. This prevents excessive overtime accumulation and aligns with hospital labor regulations.
-
-\subsubsection{Overtime Paradox Resolution} The base paper's formulation uses only a minimum constraint for regular shifts ($\geq n_3$), which causes the solver to always prefer cheaper regular shifts over overtime, resulting in zero overtime usage. This implementation introduces a strict equality option:
-\begin{equation}
-\sum_{j,k} sr_{ijk} = n_3 \cdot SR_i \quad \forall i \in I
-\end{equation}
-
-This forces exactly $n_3$ regular shifts per working nurse, requiring any additional shifts to be classified as overtime, thereby enabling realistic overtime cost modeling.
 
 \subsubsection{Exponential Fatigue Modeling} The most significant contribution integrates an exponential fatigue accumulation model based on Jaber et al. (2013). The fatigue function:
 \begin{equation}
@@ -396,27 +390,10 @@ The SOS2 constraint implementation uses binary segment indicator variables to en
 \subsection{Scenario Generation}
 
 The system provides a dual-mode data interface: users may upload custom historical demand data or utilize the built-in \textbf{Automated Sample Generator} (implemented in the \texttt{generate\_sample\_data()} function). The generator synthesizes realistic test instances using the following methodology:
-
-\subsubsection{Base Demand by Shift Type}
-Base demand for each shift type is calculated as a percentage of the total nurse pool size $|I|$, derived from typical hospital staffing patterns:
-\begin{center}
-\begin{tabular}{lccc}
-\toprule
-\textbf{Shift} & \textbf{Code} & \textbf{\% of Pool} & \textbf{Example ($|I|=20$)} \\
-\midrule
-Early (7am--3pm) & E & 25\% & 5 nurses \\
-Day (9am--5pm) & D & 30\% & 6 nurses \\
-Late (3pm--11pm) & L & 25\% & 5 nurses \\
-Night (11pm--7am) & N & 15\% & 3 nurses \\
-\bottomrule
-\end{tabular}
-\end{center}
-This scaling ensures demand remains proportional to available capacity as the nurse pool size changes.
-
 \subsubsection{Stochastic Variation}
-For each scenario-day-shift combination, random noise $\epsilon \sim \mathcal{U}(-0.15, 0.15)$ is applied to simulate demand uncertainty:
+For each scenario-day-shift combination, random integer noise $\epsilon \in \{-1, 0, +1\}$ is added to the base demand:
 \begin{equation}
-D_{jk}^{\omega} = \max(1, \lfloor D_{k}^{base} \cdot (1 + \epsilon) \rfloor)
+D_{jk}^{\omega} = \max(1, D_{k}^{base} + \epsilon)
 \end{equation}
 where the $\max(1, \cdot)$ ensures at least one nurse is always required.
 
@@ -427,7 +404,7 @@ D_{jk}^{\omega,weekend} = \max(1, \lfloor 0.8 \cdot D_{jk}^{\omega} \rfloor)
 \end{equation}
 
 \subsubsection{Output Structure}
-The generator produces a DataFrame with columns: \texttt{scenario} (1 to $|\Omega|$), \texttt{day} (1 to $|J|$), \texttt{shift} $\in \{E, D, L, N\}$, and \texttt{demand} (integer $\geq 1$). This structure is passed directly to the optimization model as exogenous input.
+The generator produces a DataFrame with columns: \texttt{scenario} (1 to $|\Omega|$), \texttt{day} (1 to $|J|$), \texttt{shift} $\in \{E, D, L, N\}$, and \texttt{demand} (integer $\geq 1$). This structure is passed directly to the optimization model as exogenous input, enabling the system to support both robust testing (via generation) and operational deployment (via custom hospital data).
 
 \subsection{Computational Complexity}
 
@@ -444,14 +421,12 @@ This is the placeholder for the Results section. It will present the proof-of-co
 \section{Conclusions}
 This is the placeholder for the Conclusions section. It will summarize the proof-of-concept contributions, validate the feasibility of the proposed framework, discuss current limitations as a prototype system, and outline the roadmap for transitioning from proof-of-concept to production-ready deployment in real healthcare settings.
 
-\end{multicols}
+% \end{small}
+% \end{multicols}
+\clearpage
 % ============================================================================
 % SECTION: REFERENCES
 % ============================================================================
-% resume two-column layout
-\newpage
-\begin{multicols}{2}
-% ----------------------------------------------------------
 \section{References}
 \begin{itemize}[leftmargin=*]
 \item [1] Meredith P, Saville C, Chiara Dall'Ora, Weeks T, Wierzbicki S, Griffiths P. Estimating Nurse Workload Using a Predictive Model From Routine Hospital Data: Algorithm Development and Validation. JMIR Medical Informatics. 2025;13:e71666-e71666. doi:https://doi.org/10.2196/71666
@@ -486,5 +461,5 @@ This is the placeholder for the Conclusions section. It will summarize the proof
 \item [30] Hadwan M, Ayob M, Sabar NR, Qu R. A harmony search algorithm for nurse rostering problems. Information Sciences. 2013;233:126-140. doi:https://doi.org/10.1016/j.ins.2012.12.025
 \item [31] Sarin SC, Sherali HD, Liao L. Minimizing conditional-value-at-risk for stochastic scheduling problems. Journal of Scheduling. 2013;17(1):5-15. doi:https://doi.org/10.1007/s10951-013-0349-6
 \end{itemize}
-\end{multicols}
+% \end{multicols}
 \end{document}
