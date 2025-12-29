@@ -1,9 +1,0 @@
-regular_shifts,overtime_shifts,total_emergency,total_cancellations,stage1_cost,stage2_cost,total_cost,nurses_working,max_nurse_shifts,min_nurse_shifts,avg_nurse_shifts,objective_value,config_name,status,feasible,solve_time,model_type
-60.0,0,19.0,0,6000.0,3800.0,9800.0,9,7.0,6.0,6.666666666666667,7266.666666666671,"1. SDM Basic (No CVaR, No Fatigue)",Optimal,True,0.770272,SDM
-60.0,0,19.0,0,6000.0,3800.0,9800.0,9,7.0,6.0,6.666666666666667,7266.666666666671,"2. SDM with Fatigue (λ=0.03, weight=50)",Optimal,True,0.470501,SDM
-60.0,0,19.0,0,6000.0,3800.0,9800.0,9,7.0,6.0,6.666666666666667,7266.666666666671,3. SDM with High Fatigue Penalty (weight=100),Optimal,True,0.428096,SDM
-60.0,0,19.0,0,6000.0,3800.0,9800.0,9,7.0,6.0,6.666666666666667,7266.666666666672,"4. SDM-CVaR (β=0.95, W=50)",Optimal,True,0.419085,SDM-CVaR
-60.0,0,19.0,0,6000.0,3800.0,9800.0,9,7.0,6.0,6.666666666666667,7266.666666666672,"5. SDM-CVaR Conservative (β=0.99, W=30)",Optimal,True,0.347215,SDM-CVaR
-60.0,0,19.0,0,6000.0,3800.0,9800.0,9,7.0,6.0,6.666666666666667,7266.666666666672,6. Full Model (CVaR + Fatigue),Optimal,True,0.338142,SDM-CVaR
-60.0,0,19.0,0,6000.0,3800.0,9800.0,9,7.0,6.0,6.666666666666667,7266.666666666671,7. Tight Constraints (n3=3),Optimal,True,0.349872,SDM
-60.0,0,19.0,0,4800.0,3420.0,8220.0,9,7.0,6.0,6.666666666666667,5940.0,"8. Lower Costs (C1=80, C2=120, Q+=180)",Optimal,True,0.311778,SDM

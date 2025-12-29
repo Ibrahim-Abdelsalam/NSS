@@ -1,4 +1,0 @@
-name,nurses,days,scenarios,data_gen_time,solve_time,total_time,status,timeout,total_variables,total_constraints,objective_value,regular_shifts,overtime_shifts,emergency_shifts
-XL-30N-30D-20S,30,30,20,0.009181976318359375,1.351613998413086,1.3607959747314453,Optimal,False,16560.0,15150.0,41290.0,300.0,1.0,1113.0
-XXL-50N-30D-30S,50,30,30,0.00924992561340332,2.787750005722046,2.796999931335449,Optimal,False,26800.0,24850.0,41166.66666666391,330.0,2.0,1177.0
-XXXL-100N-60D-50S,100,60,50,,,,Skipped,,,,,,,
