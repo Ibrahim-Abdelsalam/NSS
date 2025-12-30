@@ -9,7 +9,6 @@ import model_2  as m  # Back to using the unified model
 from io import BytesIO
 import json
 import base64
-import kpi
 from solver_config import get_available_solvers, recommend_solver, get_installation_instructions
 
 # --- 1. PAGE CONFIGURATION ---
@@ -1485,76 +1484,32 @@ if st.session_state.results is not None:
     else:
         avg_demand_per_scenario = 0
     
-    # Calculate advanced KPIs using the kpi.py module
-    kpi_data = results.get('kpi_metadata', {})
-    if kpi_data:
-        calculated_kpis = kpi.calculate_all_kpis(
-            regular_shifts=kpi_data.get('regular_shifts', 0),
-            overtime_shifts=kpi_data.get('overtime_shifts', 0),
-            emergency_shifts=kpi_data.get('emergency_shifts', 0),
-            total_demand=kpi_data.get('total_demand', 1),
-            total_cost=kpi_data.get('total_cost', 0),
-            fatigue_values=kpi_data.get('fatigue_values', []),
-            shifts_per_nurse=kpi_data.get('shifts_per_nurse', [])
-        )
-    else:
-        calculated_kpis = {}
+    st.divider()
 
-    col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2 = st.columns(2)
     
     with col1:
-        cost_status = calculated_kpis.get('Cost Per Shift', {}).get('status', '')
         st.metric(
-            f"{cost_status} Total Cost",
+            "Total Cost",
             f"${results['cost_breakdown']['total_cost']:,.0f}",
-            help=f"Total optimization cost. {calculated_kpis.get('Cost Per Shift', {}).get('value', '')} per shift."
+            help="Total optimization cost inclusive of regular, overtime, and expected recourse costs."
         )
     
     with col2:
-        coverage_status = calculated_kpis.get('Demand Coverage', {}).get('status', '')
         st.metric(
-            f"{coverage_status} Demand Coverage",
-            f"{calculated_kpis.get('Demand Coverage', {}).get('value', '0%')}",
-            help="What % of patient needs are met by planned staff (Regular + Overtime)?"
-        )
-    
-    with col3:
-        ot_status = calculated_kpis.get('Overtime Ratio', {}).get('status', '')
-        st.metric(
-            f"{ot_status} Overtime Ratio",
-            f"{calculated_kpis.get('Overtime Ratio', {}).get('value', '0%')}",
-            help="Ratio of overtime shifts to regular shifts."
-        )
-    
-    with col4:
-        understaff_status = calculated_kpis.get('Understaffing Rate', {}).get('status', '')
-        st.metric(
-            f"{understaff_status} Understaffing",
-            f"{calculated_kpis.get('Understaffing Rate', {}).get('value', '0%')}",
-            help="Reliance on emergency staff. Percentage of total shifts that are emergency recourse."
-        )
-    
-    with col5:
-        balance_status = calculated_kpis.get('Workload Balance', {}).get('status', '')
-        st.metric(
-            f"{balance_status} Workload Balance",
-            f"{calculated_kpis.get('Workload Balance', {}).get('value', 'N/A')}",
-            help="Fairness metric (Standard Deviation of shifts per nurse). Lower is better."
+            "Expected Shortage",
+            f"{results.get('expected_shortage', 0):.1f} nurses",
+            help="Average understaffing across all scenarios."
         )
 
     # Secondary metrics for Fatigue if enabled
     if results.get('fatigue_metrics', {}).get('enabled'):
         st.write("---")
-        f_col1, f_col2, f_col3 = st.columns(3)
+        f_col1, f_col2 = st.columns(2)
         with f_col1:
-            f_rate_status = calculated_kpis.get('Fatigue Rate', {}).get('status', '')
-            st.metric(f"{f_rate_status} High Fatigue Rate", calculated_kpis.get('Fatigue Rate', {}).get('value', '0%'))
+            st.metric("Average Fatigue", f"{results['fatigue_metrics'].get('avg_fatigue', 0):.2f}")
         with f_col2:
-            f_avg_status = calculated_kpis.get('Avg Fatigue', {}).get('status', '')
-            st.metric(f"{f_avg_status} Average Fatigue", calculated_kpis.get('Avg Fatigue', {}).get('value', '0'))
-        with f_col3:
-            f_max_status = calculated_kpis.get('Max Fatigue', {}).get('status', '')
-            st.metric(f"{f_max_status} Peak Fatigue", calculated_kpis.get('Max Fatigue', {}).get('value', '0'))
+            st.metric("Peak Fatigue", f"{results['fatigue_metrics'].get('max_fatigue', 0):.2f}")
     
     st.divider()
     
@@ -2292,37 +2247,7 @@ if st.session_state.results is not None:
         story.append(financial_table)
         story.append(Spacer(1, 0.15*inch))
         
-        # Solution Quality KPIs (NEW)
-        story.append(Paragraph("SOLUTION QUALITY KPIs", heading_style))
-        kpi_data = results.get('kpi_metadata', {})
-        if kpi_data:
-            calculated_kpis = kpi.calculate_all_kpis(
-                regular_shifts=kpi_data.get('regular_shifts', 0),
-                overtime_shifts=kpi_data.get('overtime_shifts', 0),
-                emergency_shifts=kpi_data.get('emergency_shifts', 0),
-                total_demand=kpi_data.get('total_demand', 1),
-                total_cost=kpi_data.get('total_cost', 0),
-                fatigue_values=kpi_data.get('fatigue_values', []),
-                shifts_per_nurse=kpi_data.get('shifts_per_nurse', [])
-            )
-            
-            kpi_rows = [['KPI Name', 'Value', 'Status']]
-            for name, data in calculated_kpis.items():
-                kpi_rows.append([name, data['value'], data['status']])
-            
-            kpi_table = Table(kpi_rows, colWidths=[2*inch, 1.25*inch, 1.25*inch])
-            kpi_table.setStyle(TableStyle([
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2c3e50')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, -1), 9),
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#ecf0f1')])
-            ]))
-            story.append(kpi_table)
-        else:
-            story.append(Paragraph("KPI data unavailable.", styles['Normal']))
+        story.append(Spacer(1, 0.15*inch))
         
         story.append(Spacer(1, 0.15*inch))
         
