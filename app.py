@@ -791,7 +791,7 @@ with st.sidebar:
             )
             mu = st.number_input(
                 "Max Acceptable Shortage (μ)", 
-                0.0, 50.0, 5.0, 0.5,
+                0.0, 150.0, 5.0, 0.5,
                 help="Maximum shortage in worst-case scenarios"
             )
     
