@@ -1,3 +1,9 @@
+"""Core optimization and validation routines for NSS.
+
+This module contains model construction/solving, result extraction,
+validation helpers, and utility functions used by the app.
+"""
+
 import pulp
 import pandas as pd
 import numpy as np
@@ -5,8 +11,13 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Tuple, Optional, Any, Union
 from solver_config import create_solver
 
+# Type aliases to keep function signatures readable.
+NurseList = List[str]
+ModelParams = Dict[str, Any]
+ScenarioData = pd.DataFrame
 
-def create_pwl_fatigue_approximation(lambda_param: float, max_hours: float = 48, 
+
+def create_pwl_fatigue_approximation(lambda_param: float, max_hours: float = 48,
                                      num_segments: int = 6) -> Tuple[List[float], List[float], List[float]]:
     """
     Create piecewise linear (PWL) approximation for exponential fatigue function F(t) = 1 - e^(-λt).
@@ -69,7 +80,7 @@ def create_pwl_fatigue_approximation(lambda_param: float, max_hours: float = 48,
     return breakpoints.tolist(), slopes, exact_values
 
 
-def validate_capacity_feasibility(nurses_list: List[str], scenarios_df: pd.DataFrame, model_params: Dict[str, Any]) -> Tuple[bool, str, Dict[str, Any]]:
+def validate_capacity_feasibility(nurses_list: NurseList, scenarios_df: ScenarioData, model_params: ModelParams) -> Tuple[bool, str, Dict[str, Any]]:
     """
     Validate if the problem is practically feasible by checking:
     - Total nurse capacity vs baseline demand
@@ -178,10 +189,15 @@ def validate_capacity_feasibility(nurses_list: List[str], scenarios_df: pd.DataF
 
     return is_feasible, message, details
 
+
+# ---------------------------------------------------------------------------
+# Core Optimization Model
+# ---------------------------------------------------------------------------
+
 def build_and_solve_model(
-    nurses_list: List[str], 
-    scenarios_df: pd.DataFrame, 
-    model_params: Dict[str, Any], 
+    nurses_list: NurseList,
+    scenarios_df: ScenarioData,
+    model_params: ModelParams,
     model_type: str = "SDM",
     solver_name: str = "AUTO"
 ) -> Tuple[pulp.LpProblem, str]:
@@ -1381,7 +1397,12 @@ Suggested Solutions:
     return prob, status
 
 
-def extract_results(prob: pulp.LpProblem, nurses_list: List[str], scenarios_df: pd.DataFrame, model_params: Dict[str, Any], model_type: str = "SDM") -> Optional[Dict[str, Any]]:
+# ---------------------------------------------------------------------------
+# Result Extraction
+# ---------------------------------------------------------------------------
+
+
+def extract_results(prob: pulp.LpProblem, nurses_list: NurseList, scenarios_df: ScenarioData, model_params: ModelParams, model_type: str = "SDM") -> Optional[Dict[str, Any]]:
     """
     Extract and organize comprehensive results from the solved optimization model.
     
@@ -1796,7 +1817,7 @@ then handle excess demand with more expensive but flexible emergency staff.
     }
 
 
-def generate_sample_data(num_nurses: int = 10, num_days: int = 14, num_scenarios: int = 5) -> Tuple[List[str], pd.DataFrame]:
+def generate_sample_data(num_nurses: int = 10, num_days: int = 14, num_scenarios: int = 5) -> Tuple[NurseList, ScenarioData]:
     """
     Generate realistic sample data for testing the nurse scheduling model.
     
@@ -1898,7 +1919,7 @@ def generate_sample_data(num_nurses: int = 10, num_days: int = 14, num_scenarios
     return nurses_list, scenarios_df
 
 
-def validate_parameters(model_params: Dict[str, Any], nurses_list: List[str], scenarios_df: pd.DataFrame) -> Tuple[List[str], List[str]]:
+def validate_parameters(model_params: ModelParams, nurses_list: NurseList, scenarios_df: ScenarioData) -> Tuple[List[str], List[str]]:
     """
     Validate all model parameters before optimization.
     
@@ -2060,7 +2081,7 @@ def validate_parameters(model_params: Dict[str, Any], nurses_list: List[str], sc
     return errors, warnings
 
 
-def estimate_solve_time(nurses_list: List[str], scenarios_df: pd.DataFrame, model_params: Dict[str, Any]) -> Dict[str, Any]:
+def estimate_solve_time(nurses_list: NurseList, scenarios_df: ScenarioData, model_params: ModelParams) -> Dict[str, Any]:
     """
     Estimate solve time based on problem size and complexity.
     
@@ -2163,7 +2184,7 @@ def estimate_solve_time(nurses_list: List[str], scenarios_df: pd.DataFrame, mode
     }
 
 
-def validate_results(results: Dict[str, Any], model_params: Dict[str, Any]) -> Tuple[List[str], List[str]]:
+def validate_results(results: Dict[str, Any], model_params: ModelParams) -> Tuple[List[str], List[str]]:
     """
     Validate optimization results to ensure all constraints are satisfied.
     
@@ -2284,6 +2305,11 @@ def validate_results(results: Dict[str, Any], model_params: Dict[str, Any]) -> T
         warnings.append(f"⚠️ {idle_nurses} nurses have no assigned shifts")
     
     return errors, warnings
+
+
+# ---------------------------------------------------------------------------
+# Default Parameter Factory
+# ---------------------------------------------------------------------------
 
 
 def get_default_params():
