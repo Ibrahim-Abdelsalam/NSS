@@ -19,7 +19,7 @@ A research-grade implementation of He et al. (2019) with significant enhancement
 <br>
 
 <div align="center">
-  <img src="Menu.png" alt="Application Menu Interface" width="100%">
+  <img src="assets/images/Menu.png" alt="Application Menu Interface" width="100%">
 </div>
 
 <br>
@@ -58,7 +58,13 @@ A research-grade implementation of He et al. (2019) with significant enhancement
 ### Bug Fixes & Refinements
 - **Import Path Fixed** - Resolved `scripts.solver_config` → `solver_config` error
 - **Baseline Demand Redefined** - Changed from arbitrary scenario to expected demand (statistical mean)
-- **Repository Cleanup** - Organized into docs/, scripts/, tests/, experiments/, logs/, archive/ structure
+- **Repository Cleanup** - Removed legacy report variants and consolidated documentation around one canonical report
+
+### Documentation Status (Current)
+- **Canonical report**: `Final_report.tex` (root)
+- **Mathematical appendix/model details**: `Mathematical_Model.tex`
+- **Technical guides**: `docs/`
+- **Removed legacy docs**: `PROJECT_DOCUMENTATION.tex` and `Final Report/`
 
 ## Quick Start
 
@@ -94,69 +100,31 @@ In the sidebar under "Work Rules > Basic Shift Constraints":
 
 ```
 NSS/
-├── Core Application
-│   ├── app.py                      # Streamlit web interface (2,364 lines)
-│   ├── model.py                    # Optimization model (2,376 lines, 11 functions)
-│   └── solver_config.py            # Solver detection & configuration
-│
-├── Experiments & Results
-│   ├── experiments/                # Parameter tuning experiments
-│   │   ├── parameter_tuning.py         # Factorial design (2,430 runs)
-│   │   ├── statistical_validation.py   # ANOVA and sensitivity analysis
-│   │   ├── analyze_tuning_results.py   # Results visualization
-│   │   ├── visualize_fatigue.py        # Fatigue model visualization
-│   │   └── retry_failed.py             # Retry logic for timeouts
-│   │
-│   ├── results/                    # Experiment outputs
-│   │   ├── parameter_tuning_results.csv    # 2,430 experimental runs
-│   │   ├── optimal_configurations.csv      # Top performers
-│   │   ├── sensitivity_analysis.csv        # Parameter sensitivity
-│   │   └── figures/                        # Visualization outputs
-│   │
-│   └── logs/                       # Execution logs
-│       └── parameter_tuning_60s.log        # 2.2MB detailed log
-│
-├── Data & Tests
-│   ├── data/                       # Sample datasets and test cases
-│   │   ├── sample_nurses.csv           # Basic test (10 nurses)
-│   │   ├── sample_scenarios.csv        # Basic scenarios
-│   │   ├── overtime_test_*.csv (2)     # Overtime validation
-│   │   ├── 40_nurses_30days_*.csv (2)  # Large-scale test
-│   │   └── cvar_*.csv (2)              # CVaR risk test
-│   │
-│   ├── scripts/                    # Standalone analysis scripts
-│   │   ├── VALIDATE_OVERTIME.py        # Overtime test suite
-│   │   ├── COMPLETE_TEST_INSTANCE.py   # Full example
-│   │   └── model_2.py                  # Paper-pure variant (archived)
-│   │
-│   └── tests/                      # Unit tests
-│       └── test_overtime_revert.py     # Overtime paradox verification
-│
-├── Documentation
-│   ├── Mathematical_Model.tex      # Complete mathematical formulation (47KB)
-│   ├── docs/
-│   │   ├── CVaR_Explained.tex          # CVaR risk tutorial
-│   │   ├── DETAILED_COMPARISON.md      # Line-by-line vs paper (33KB)
-│   │   ├── PAPER_ANALYSIS.md           # Overtime paradox analysis
-│   │   ├── USER_GUIDE.md               # Complete user guide
-│   │   ├── TECHNICAL_GUIDE.md          # Developer documentation
-│   │   ├── PARAMETER_GUIDE.md          # All parameters explained
-│   │   ├── CONSTRAINTS_GUIDE.md        # Constraint reference
-│   │   └── He et al. (2019).pdf        # Original research paper
-│   │
-│   └── archive/                    # Historical documentation
-│       ├── docs/                       # Superseded reports
-│       └── results/                    # Previous experiment data
-│
-├── Project Files
-│   ├── README.md                   # This file
-│   ├── requirements.txt            # Python dependencies
-│   └── LICENSE                     # MIT License
-│
-└── Support Files
-    ├── notebooks/                  # Jupyter analysis notebooks
-    ├── Output/                     # User-generated output directory
-    └── loading.gif                 # UI loading animation
+├── app.py                          # Streamlit web interface
+├── model_2.py                      # Optimization model
+├── solver_config.py                # Solver detection & configuration
+├── validation_framework.py         # Validation and reproducibility checks
+├── test_model.py                   # Main test script
+├── assets/
+│   └── images/                     # UI images (banner, menu, loading)
+├── experiments/                    # Experiment scripts + generated outputs
+│   ├── parameter_tuning.py
+│   ├── statistical_validation.py
+│   ├── analyze_tuning_results.py
+│   ├── visualize_fatigue.py
+│   ├── experiment_pipeline.py
+│   ├── retry_failed.py
+│   ├── results/                    # Regenerable experiment outputs
+│   └── logs/                       # Regenerable logs
+├── data/
+│   ├── PBL_data/
+│   └── real_world_data/
+├── docs/                           # Technical notes and guides
+├── Final_report.tex                # Canonical project report
+├── Mathematical_Model.tex          # Full mathematical formulation
+├── VALIDATION_AND_REPRODUCIBILITY.md
+├── requirements.txt
+└── README.md
 ```
 
 ## Solver Configuration
@@ -330,7 +298,9 @@ F1-F6. Fatigue modeling constraints (optional, SOS2-based)
 3. **Solver Performance**: Higher thresholds dramatically improve convergence
 4. **Cost Trade-offs**: Higher safety weights reduce fatigue but increase total cost 15-25%
 
-**Results:** See `results/parameter_tuning_results.csv` (538KB, 2,430 rows)
+**Results:** See `experiments/results/parameter_tuning_results.csv` (538KB, 2,430 rows)
+
+Generated experiment artifacts in `experiments/results/` and `experiments/logs/` can be deleted safely and regenerated by rerunning the experiment scripts.
 
 ### Analysis Scripts
 
@@ -420,7 +390,7 @@ pip install highspy
 - Use Gurobi instead of HiGHS (10× faster)
 - Disable soft constraints (c3=0, c4=0)
 - Disable fatigue modeling (`patient_safety_enabled=False`)
-- See [PERFORMANCE_ANALYSIS.md](docs/PERFORMANCE_ANALYSIS.md)
+- See [TECHNICAL_GUIDE.md](docs/TECHNICAL_GUIDE.md)
 
 ## Documentation
 
@@ -432,8 +402,9 @@ pip install highspy
 | [PAPER_ANALYSIS.md](docs/PAPER_ANALYSIS.md) | Overtime paradox analysis and resolution | Complete |
 | [PARAMETER_GUIDE.md](docs/PARAMETER_GUIDE.md) | All parameters explained with examples | Available |
 | [CONSTRAINTS_GUIDE.md](docs/CONSTRAINTS_GUIDE.md) | Complete constraint reference (22 constraints) | Available |
-| [MODEL_STRUCTURE.md](docs/MODEL_STRUCTURE.md) | Code architecture and design patterns | Available |
-| [PERFORMANCE_ANALYSIS.md](docs/PERFORMANCE_ANALYSIS.md) | Solver benchmarks and optimization tips | Available |
+| [MODEL_WALKTHROUGH.md](docs/MODEL_WALKTHROUGH.md) | Model architecture and implementation walk-through | Available |
+| [TECHNICAL_GUIDE.md](docs/TECHNICAL_GUIDE.md) | Solver guidance, implementation notes, and technical details | Available |
+| [QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md) | Fast lookup for key equations, constraints, and parameters | Available |
 
 ## Technical Stack
 

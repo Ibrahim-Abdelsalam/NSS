@@ -210,8 +210,13 @@ class ParameterValidator:
             )
 
             if not feasible:
+<<<<<<< HEAD
                 warnings.append(f"CHECK 3: Capacity warning: {feasibility_msg} (Recourse/emergency staff will be used)")
                 checks_passed += 1
+=======
+                errors.append(f"CHECK 3: Capacity infeasibility: {feasibility_msg}")
+                checks_failed += 1
+>>>>>>> 74ea8bacae8f330b86ef6f5e56f1ba7ab4858ff5
             else:
                 checks_passed += 1
                 if details.get("utilization_percent", 0) > 80:
