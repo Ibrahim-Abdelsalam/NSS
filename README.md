@@ -26,49 +26,18 @@ A research-grade implementation of He et al. (2019) with significant enhancement
 
 ## Key Features
 
-### Mathematical Foundation
-- **Two-Stage Stochastic Programming** - Optimizes under demand uncertainty with recourse decisions
-- **CVaR Risk Management** - Controls worst-case shortage risk via Conditional Value-at-Risk
-- **Configurable Overtime Logic** - Toggle between paper's formulation and NSS-enhanced strict rules
-- **Piecewise-Linear Fatigue Modeling** - SOS2-based exponential fatigue approximation (Jaber et al., 2013)
-- **18+ Constraints** - Complete implementation with optional advanced constraints
-
-### Research Contributions
-- **Overtime Paradox Analysis** - Identified and resolved mathematical gap in paper's overtime formulation
-- **Dual Model Variants** - Paper-faithful mode vs. NSS-enhanced mode with strict overtime enforcement
-- **Parameter Tuning Study** - 2,430-run factorial experiment on fatigue modeling sensitivity
-- **Solver Configuration Framework** - Auto-detection and optimization for Gurobi/HiGHS/CBC
-
-### User Experience
-- **Web Interface** - Professional Streamlit dashboard (no coding  required)
-- **Real-Time Optimization** - 5-60 second solve times with Gurobi/HiGHS
-- **Interactive Visualizations** - Schedule heatmaps, cost breakdowns, scenario analysis
-- **Comprehensive Validation** - Input validation, feasibility checking, result verification
-- **Export Options** - CSV, Excel, JSON formats
-
-## Recent Updates (December 2025)
-
-### Major Enhancements
-- **Configurable Overtime Logic** - Added UI toggle to switch between paper mode (overtime paradox) and NSS mode (strict enforcement)
-- **Fatigue Modeling Experiments** - Completed 2,430-run parameter tuning study testing λ, safety weight, and fatigue thresholds
-- **Experimental Results** - Generated sensitivity analysis showing threshold=0.6 causes consistent solver timeouts
-- **Enhanced Validation** - Added capacity feasibility checks with detailed warnings
-- **Documentation Expansion** - Created Mathematical_Model.tex with line-by-line code correspondence
-
-### Bug Fixes & Refinements
-- **Import Path Fixed** - Resolved `scripts.solver_config` → `solver_config` error
-- **Baseline Demand Redefined** - Changed from arbitrary scenario to expected demand (statistical mean)
-- **Repository Cleanup** - Removed legacy report variants and consolidated documentation around one canonical report
-
-### Documentation Status (Current)
-- **Canonical report**: `Final_report.tex` (root)
-- **Mathematical appendix/model details**: `Mathematical_Model.tex`
-- **Technical guides**: `docs/`
-- **Removed legacy docs**: `PROJECT_DOCUMENTATION.tex` and `Final Report/`
+- **Two-Stage Stochastic Programming** — Optimizes under demand uncertainty with recourse decisions
+- **CVaR Risk Management** — Controls worst-case shortage risk via Conditional Value-at-Risk
+- **Configurable Overtime Logic** — Toggle between paper's formulation and NSS-enhanced strict rules
+- **Piecewise-Linear Fatigue Modeling** — SOS2-based exponential fatigue approximation (Jaber et al., 2013)
+- **18+ Constraints** — Complete implementation with optional advanced constraints
+- **Web Interface** — Professional Streamlit dashboard with interactive visualizations
+- **Export Options** — CSV, Excel, JSON formats
 
 ## Quick Start
 
-### 1. Installation
+### Installation
+
 ```bash
 # Clone repository
 git clone https://github.com/Ibrahim-Abdelsalam/NSS.git
@@ -78,78 +47,25 @@ cd NSS
 pip install -r requirements.txt
 
 # Install a solver (choose one)
-pip install highspy  # Free solver (recommended for testing)
+pip install highspy  # Free, open-source (recommended)
 # OR get Gurobi academic license: https://www.gurobi.com/academia/
 ```
 
-### 2. Run Application
+### Run
+
 ```bash
-streamlit run main.py
+python -m streamlit run main.py
 ```
 
 Opens at **http://localhost:8501**
 
-### 3. Configure Overtime Behavior
-In the sidebar under "Work Rules > Basic Shift Constraints":
-- **Unchecked** (Default): Paper Mode - demonstrates "Overtime Paradox" (0 overtime usage)
-- **Checked**: NSS Mode - enforces strict overtime rules with weekly caps
+### Supported Solvers
 
-**Full Guide:** See [OVERTIME_TEST_GUIDE.md](OVERTIME_TEST_GUIDE.md) for detailed testing instructions.
+The system auto-detects and uses the best available solver:
 
-## Project Structure
-
-```
-NSS/
-├── app.py                          # Streamlit web interface
-├── model_2.py                      # Optimization model
-├── solver_config.py                # Solver detection & configuration
-├── validation_framework.py         # Validation and reproducibility checks
-├── test_model.py                   # Main test script
-├── assets/
-│   └── images/                     # UI images (banner, menu, loading)
-├── experiments/                    # Experiment scripts + generated outputs
-│   ├── parameter_tuning.py
-│   ├── statistical_validation.py
-│   ├── analyze_tuning_results.py
-│   ├── visualize_fatigue.py
-│   ├── experiment_pipeline.py
-│   ├── retry_failed.py
-│   ├── results/                    # Regenerable experiment outputs
-│   └── logs/                       # Regenerable logs
-├── data/
-│   ├── PBL_data/
-│   └── real_world_data/
-├── docs/                           # Technical notes and guides
-├── Final_report.tex                # Canonical project report
-├── Mathematical_Model.tex          # Full mathematical formulation
-├── VALIDATION_AND_REPRODUCIBILITY.md
-├── requirements.txt
-└── README.md
-```
-
-## Solver Configuration
-
-The model supports multiple optimization solvers with automatic detection:
-
-| Solver | License | Speed | Memory | Recommended For |
-|--------|---------|-------|--------|-----------------|
-| **Gurobi** | Academic (free) / Commercial | Fastest (0.06-60s) | Low | **Production use** |
-| **HiGHS** | Open-source (free) | Fast (5-300s) | Low | **Testing & development** |
-| **CBC** | Open-source (free) | Moderate (30-600s) | Medium | **Fallback option** |
-
-### Installation
-
-**HiGHS (Recommended for free use):**
-```bash
-pip install highspy
-```
-
-**Gurobi (Fastest, free for academics):**
-1. Get academic license: https://www.gurobi.com/academia/
-2. Install: `pip install gurobipy`
-3. Activate license: `grbgetkey YOUR-LICENSE-KEY`
-
-The system auto-detects and uses the best available solver.
+- **Gurobi** — Commercial solver with free academic license. Best performance for large-scale problems.
+- **HiGHS** — Open-source (MIT license). Recommended for general use with no restrictions.
+- **CBC** — Open-source, bundled with PuLP. Works out of the box as a fallback.
 
 ## Mathematical Model
 
@@ -251,7 +167,7 @@ F1-F6. Fatigue modeling constraints (optional, SOS2-based)
 
 **Caution:** Threshold below 0.65 may cause solver timeouts (see experiment results).
 
-### Overtime Configuration (New!)
+### Overtime Configuration
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `allow_overtime_paradox` | If True: Paper mode (min regular, no OT caps). If False: NSS mode (strict regular quota + weekly OT cap) | True (Paper) |
@@ -264,21 +180,114 @@ F1-F6. Fatigue modeling constraints (optional, SOS2-based)
 
 **Complete Guide:** See [PARAMETER_GUIDE.md](docs/PARAMETER_GUIDE.md) for detailed parameter explanations.
 
-## Performance Benchmarks
+## Project Structure
 
-**Test Configuration:**
-- MacBook Pro M1 (8-core)
-- 16GB RAM
-- Gurobi 11.0 solver
+```
+NSS/
+├── Core Application
+│   ├── app.py                      # Streamlit web interface (2,364 lines)
+│   ├── model.py                    # Optimization model (2,376 lines, 11 functions)
+│   └── solver_config.py            # Solver detection & configuration
+│
+├── Experiments & Results
+│   ├── experiments/                # Parameter tuning experiments
+│   │   ├── parameter_tuning.py         # Factorial design (2,430 runs)
+│   │   ├── statistical_validation.py   # ANOVA and sensitivity analysis
+│   │   ├── analyze_tuning_results.py   # Results visualization
+│   │   ├── visualize_fatigue.py        # Fatigue model visualization
+│   │   └── retry_failed.py             # Retry logic for timeouts
+│   │
+│   ├── results/                    # Experiment outputs
+│   │   ├── parameter_tuning_results.csv    # 2,430 experimental runs
+│   │   ├── optimal_configurations.csv      # Top performers
+│   │   ├── sensitivity_analysis.csv        # Parameter sensitivity
+│   │   └── figures/                        # Visualization outputs
+│   │
+│   └── logs/                       # Execution logs
+│       └── parameter_tuning_60s.log        # 2.2MB detailed log
+│
+├── Data & Tests
+│   ├── data/                       # Sample datasets and test cases
+│   │   ├── sample_nurses.csv           # Basic test (10 nurses)
+│   │   ├── sample_scenarios.csv        # Basic scenarios
+│   │   ├── overtime_test_*.csv (2)     # Overtime validation
+│   │   ├── 40_nurses_30days_*.csv (2)  # Large-scale test
+│   │   └── cvar_*.csv (2)              # CVaR risk test
+│   │
+│   ├── scripts/                    # Standalone analysis scripts
+│   │   ├── VALIDATE_OVERTIME.py        # Overtime test suite
+│   │   ├── COMPLETE_TEST_INSTANCE.py   # Full example
+│   │   └── model_2.py                  # Paper-pure variant (archived)
+│   │
+│   └── tests/                      # Unit tests
+│       └── test_overtime_revert.py     # Overtime paradox verification
+│
+├── Documentation
+│   ├── Mathematical_Model.tex      # Complete mathematical formulation (47KB)
+│   ├── docs/
+│   │   ├── CVaR_Explained.tex          # CVaR risk tutorial
+│   │   ├── DETAILED_COMPARISON.md      # Line-by-line vs paper (33KB)
+│   │   ├── PAPER_ANALYSIS.md           # Overtime paradox analysis
+│   │   ├── USER_GUIDE.md               # Complete user guide
+│   │   ├── TECHNICAL_GUIDE.md          # Developer documentation
+│   │   ├── PARAMETER_GUIDE.md          # All parameters explained
+│   │   ├── CONSTRAINTS_GUIDE.md        # Constraint reference
+│   │   └── He et al. (2019).pdf        # Original research paper
+│   │
+│   └── archive/                    # Historical documentation
+│       ├── docs/                       # Superseded reports
+│       └── results/                    # Previous experiment data
+│
+├── Project Files
+│   ├── README.md                   # This file
+│   ├── requirements.txt            # Python dependencies
+│   └── LICENSE                     # MIT License
+│
+└── Support Files
+    ├── notebooks/                  # Jupyter analysis notebooks
+    ├── Output/                     # User-generated output directory
+    └── loading.gif                 # UI loading animation
+```
 
-| Problem Size | Variables | Constraints | Solve Time | Status |
-|-------------|-----------|-------------|------------|--------|
-| Small (10 nurses, 7 days, 3 scenarios) | ~2,400 | ~2,200 | 0.06s | Optimal |
-| Medium (20 nurses, 14 days, 5 scenarios) | ~9,600 | ~8,800 | 2.3s | Optimal |
-| Large (40 nurses, 30 days, 10 scenarios) | ~91,000 | ~83,000 | 58s | Optimal |
-| Very Large (50 nurses, 30 days, 20 scenarios) | ~180,000 | ~165,000 | 5m 23s | Near-optimal (0.5% gap) |
+## Technical Stack
 
-**HiGHS Solver:** ~10× slower than Gurobi but still practical for medium problems.
+**Core Dependencies:**
+- `gurobipy>=11.0.3` or `highspy>=1.7.0` — MIP solver
+- `pulp>=2.9.0` — Mathematical modeling language
+- `streamlit>=1.40.2` — Web interface
+- `pandas>=2.2.3` — Data handling
+- `numpy>=2.2.1` — Numerical operations
+- `matplotlib>=3.9.0` — Visualization (for experiments)
+- `seaborn>=0.13.0` — Statistical graphics
+
+**Development:**
+- Python 3.11+ (tested on 3.11.5 and 3.13)
+- macOS/Linux/Windows compatible
+- No C++ compilation required (pure Python)
+
+## Testing & Validation
+
+### Test Suite
+```bash
+# Run comprehensive validation tests
+python scripts/VALIDATE_OVERTIME.py
+# Expected: 4/4 tests PASSED
+
+# Run complete test instance
+python scripts/COMPLETE_TEST_INSTANCE.py
+# Expected: 40 regular + 2 overtime = £5,700
+
+# Test with CSV files
+python scripts/run_test_with_csv.py
+```
+
+### Validation Results
+- **All core constraints validated** (Constraints 1-18)
+- **Overtime functionality verified** (Paper mode vs NSS mode)
+- **CVaR risk management tested** (SDM-CVaR model)
+- **Fatigue modeling validated** (PWL approximation accuracy: 0.398% avg error)
+- **Parameter tuning complete** (2,430 experimental runs)
+- **Paper comparison complete** (see DETAILED_COMPARISON.md)
 
 ## Experimental Research
 
@@ -321,77 +330,6 @@ python experiments/statistical_validation.py
 python experiments/visualize_fatigue.py
 ```
 
-## Testing & Validation
-
-### Test Suite
-```bash
-# Run comprehensive validation tests
-python scripts/VALIDATE_OVERTIME.py
-# Expected: 4/4 tests PASSED
-
-# Run complete test instance
-python scripts/COMPLETE_TEST_INSTANCE.py
-# Expected: 40 regular + 2 overtime = £5,700
-
-# Test with CSV files
-python scripts/run_test_with_csv.py
-```
-
-### Validation Results
-- **All core constraints validated** (Constraints 1-18)  
-- **Overtime functionality verified** (Paper mode vs NSS mode)  
-- **CVaR risk management tested** (SDM-CVaR model)  
-- **Fatigue modeling validated** (PWL approximation accuracy: 0.398% avg error)
-- **Parameter tuning complete** (2,430 experimental runs)
-- **Paper comparison complete** (see DETAILED_COMPARISON.md)
-
-## Troubleshooting
-
-### Common Issues
-
-**ModuleNotFoundError: No module named 'scripts.solver_config'**
-```bash
-# Fixed in latest version - import path corrected
-# If you see this, update model.py line 6:
-# from solver_config import ...  # Correct
-```
-
-**Overtime shifts not being generated**
-- Enable "Enable NSS Strict Overtime Rules" checkbox in UI (sidebar under "Work Rules")
-- This forces strict regular quota (Constraint 8 as equality)
-- Without this, model exhibits "Overtime Paradox" (0 overtime due to cost preference)
-- See [PAPER_ANALYSIS.md](docs/PAPER_ANALYSIS.md) for mathematical explanation
-
-**Solver not found / No solver available**
-```bash
-# Install HiGHS (free):
-pip install highspy
-
-# Or install Gurobi (academic license):
-# 1. Get license from gurobi.com/academia
-# 2. pip install gurobipy
-# 3. Run: grbgetkey <your-license-key>
-```
-
-**Solver timeout with fatigue modeling**
-- Increase `max_fatigue_threshold` above 0.65 (lower thresholds are very hard to satisfy)
-- Reduce problem size (fewer nurses, days, or scenarios)
-- Use Gurobi instead of HiGHS (10× faster)
-- Set longer time limit in parameters
-
-**Infeasible solution / No solution found**
-- Check capacity warnings in console output
-- Increase available nurses in `sample_nurses.csv`
-- Relax hard constraints (decrease `n1`, `n2`, increase `n3`)
-- Disable fatigue modeling if threshold is too restrictive
-
-**Very slow solving (>10 minutes)**
-- Reduce problem size (fewer scenarios, shorter horizon)
-- Use Gurobi instead of HiGHS (10× faster)
-- Disable soft constraints (c3=0, c4=0)
-- Disable fatigue modeling (`patient_safety_enabled=False`)
-- See [TECHNICAL_GUIDE.md](docs/TECHNICAL_GUIDE.md)
-
 ## Documentation
 
 | Document | Description | Status |
@@ -406,28 +344,32 @@ pip install highspy
 | [TECHNICAL_GUIDE.md](docs/TECHNICAL_GUIDE.md) | Solver guidance, implementation notes, and technical details | Available |
 | [QUICK_REFERENCE.md](docs/QUICK_REFERENCE.md) | Fast lookup for key equations, constraints, and parameters | Available |
 
-## Technical Stack
+## Troubleshooting
 
-**Core Dependencies:**
-- `gurobipy>=11.0.3` or `highspy>=1.7.0` - MIP solver
-- `pulp>=2.9.0` - Mathematical modeling language
-- `streamlit>=1.40.2` - Web interface
-- `pandas>=2.2.3` - Data handling
-- `numpy>=2.2.1` - Numerical operations
-- `matplotlib>=3.9.0` - Visualization (for experiments)
-- `seaborn>=0.13.0` - Statistical graphics
+**Overtime shifts not being generated**
+- Enable "Enable NSS Strict Overtime Rules" checkbox in UI (sidebar under "Work Rules")
+- Without this, model exhibits "Overtime Paradox" (0 overtime due to cost preference)
+- See [PAPER_ANALYSIS.md](docs/PAPER_ANALYSIS.md) for mathematical explanation
 
-**Development:**
-- Python 3.11+ (tested on 3.11.5 and 3.13)
-- macOS/Linux/Windows compatible
-- No C++ compilation required (pure Python)
+**Solver not found / No solver available**
+```bash
+pip install highspy   # Free, open-source
+```
 
-**Solver Comparison:**
-| Solver | Speed | License | Memory | Recommended For |
-|--------|-------|---------|--------|-----------------|
-| **Gurobi** | Fastest | Academic/Commercial | Low | Production use |
-| **HiGHS** | Fast | Open-source | Low | Research/testing |
-| **CBC** | Moderate | Open-source | Medium | Fallback only |
+**Solver timeout with fatigue modeling**
+- Increase `max_fatigue_threshold` above 0.65 (lower thresholds are very hard to satisfy)
+- Reduce problem size (fewer nurses, days, or scenarios)
+- Set longer time limit in parameters
+
+**Infeasible solution / No solution found**
+- Check capacity warnings in console output
+- Increase available nurses or relax hard constraints
+- Disable fatigue modeling if threshold is too restrictive
+
+**Very slow solving (>10 minutes)**
+- Reduce problem size (fewer scenarios, shorter horizon)
+- Disable soft constraints (c3=0, c4=0) or fatigue modeling
+- See [TECHNICAL_GUIDE.md](docs/TECHNICAL_GUIDE.md)
 
 ## Academic Foundation
 
@@ -437,48 +379,24 @@ pip install highspy
 - Jaber, M. Y., Givi, Z. S., & Neumann, W. P. (2013). Incorporating human fatigue and recovery into the learning–forgetting process. *Applied Mathematical Modelling*, 37(12-13), 7287-7299.
 - Rockafellar, R. T., & Uryasev, S. (2000). Optimization of conditional value-at-risk. *Journal of Risk*, 2, 21-42.
 
-**Implementation:** This codebase is a complete implementation of the SDM-CVaR model with significant enhancements:
-
 **Key Extensions & Contributions:**
-1. **Overtime Paradox Resolution** - Identified and resolved gap in paper's formulation
-2. **Configurable Overtime** - Dual mode system (Paper vs NSS)
-3. **Fatigue Modeling** - SOS2-based PWL approximation (not in original paper)
-4. **Parameter Tuning Study** - 2,430-run experimental validation
-5. **Comprehensive Documentation** - Complete mathematical correspondence
-6. **Validation Framework** - Automated feasibility checking and warnings
+1. **Overtime Paradox Resolution** — Identified and resolved gap in paper's formulation
+2. **Configurable Overtime** — Dual mode system (Paper vs NSS)
+3. **Fatigue Modeling** — SOS2-based PWL approximation (not in original paper)
+4. **Parameter Tuning Study** — 2,430-run experimental validation
+5. **Comprehensive Documentation** — Complete mathematical correspondence
+6. **Validation Framework** — Automated feasibility checking and warnings
 
 ## Project Status
 
 **Research Proof-of-Concept** (December 2024-2025)
 
-### Intended Use
-- **Academic Research**: Demonstrate advanced optimization techniques (CVaR, fatigue modeling, stochastic programming)
-- **Educational Tool**: Teaching two-stage stochastic programming and healthcare OR
-- **Algorithm Validation**: Benchmark solvers, test parameter configurations, experimental studies
-- **Proof-of-Concept**: Show feasibility of fatigue-aware risk-controlled scheduling
+This project is intended for **academic research**, **education**, and **algorithm validation**. It is not intended for production healthcare deployment without extensive clinical validation and regulatory approval.
 
-### NOT Intended For
-- **Production Healthcare Deployment**: Requires extensive validation, regulatory approval, and safety audits
-- **Real Patient Safety Decisions**: Clinical validation needed before any healthcare use
-- **Compliance with Healthcare Regulations**: HIPAA, patient safety standards not implemented
-
-### Development Status
 - Core model: 100% complete (22 constraints including fatigue)
 - Validation: 4/4 tests passing
 - Documentation: 10+ comprehensive guides
 - Experiments: 2,430-run parameter tuning complete
-- Analysis: Overtime paradox identified and resolved
-- Test coverage: Overtime, CVaR, fatigue, emergency staff, soft constraints
-
-### Recent Milestones (Dec 2025)
-- Completed parameter tuning study (2,430 experimental runs)
-- Added configurable overtime logic with UI toggle
-- Enhanced fatigue modeling with SOS2 constraints
-- Created Mathematical_Model.tex with code correspondence
-- Generated sensitivity analysis and optimal configurations
-- Updated README with experiment results
-- Organized project into clear directory structure
-
 
 ## License
 
@@ -514,4 +432,3 @@ MIT License - See [LICENSE](LICENSE) for details.
 ```
 
 **Star this repo if you find it useful for your research!**
-
