@@ -1,3 +1,4 @@
+
 # FROST-NS: Fatigue-aware Risk Optimization for Stochastic Task allocation in Nurse Scheduling
 
 **Nurse Scheduling System with CVaR Risk Control and Fatigue Modeling**
