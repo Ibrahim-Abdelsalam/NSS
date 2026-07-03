@@ -1,3 +1,4 @@
+
 # FROST-NS: Fatigue-aware Risk Optimization for Stochastic Task allocation in Nurse Scheduling
 
 **Nurse Scheduling System with CVaR Risk Control and Fatigue Modeling**
@@ -77,7 +78,7 @@ pip install highspy  # Free solver (recommended for testing)
 
 ### 2. Run Application
 ```bash
-streamlit run app.py
+streamlit run main.py
 ```
 
 Opens at **http://localhost:8501**
