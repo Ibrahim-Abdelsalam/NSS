@@ -77,7 +77,7 @@ pip install highspy  # Free solver (recommended for testing)
 
 ### 2. Run Application
 ```bash
-streamlit run app.py
+streamlit run main.py
 ```
 
 Opens at **http://localhost:8501**

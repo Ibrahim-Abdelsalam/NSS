@@ -32,8 +32,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pandas as pd
 import numpy as np
-import model_2
-from validation_framework import (
+import core._model_core as model_2
+from core.validator import (
     PreRunValidator, ResultValidator, run_complete_validation, sanitize_parameters
 )
 from experiments.experiment_pipeline import (

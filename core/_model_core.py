@@ -1,9 +1,10 @@
+# Internal module — import via core/model.py only
 import pulp
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from typing import List, Dict, Tuple, Optional, Any, Union
-from solver_config import create_solver
+from core.solver_config import create_solver
 
 
 def create_pwl_fatigue_approximation(lambda_param: float, max_hours: float = 48, 

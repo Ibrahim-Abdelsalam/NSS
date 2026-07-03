@@ -1,15 +1,16 @@
+# Legacy monolithic app — archived for reference only
 import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import model_2  as m  # Back to using the unified model
+import core._model_core as m  # Back to using the unified model
 # `model_oop` removed — use functional API in `model.py` instead
 from io import BytesIO
 import json
 import base64
-from solver_config import get_available_solvers, recommend_solver, get_installation_instructions
+from core.solver_config import get_available_solvers, recommend_solver, get_installation_instructions
 
 # --- 1. PAGE CONFIGURATION ---
 st.set_page_config(
@@ -855,7 +856,7 @@ with st.sidebar:
     # --- Solver Selection ---
     st.header("Solver Configuration")
     
-    from solver_config import auto_select_solver, get_available_solvers
+    from core.solver_config import auto_select_solver, get_available_solvers
     
     # Get available solvers
     available_solvers = get_available_solvers()
