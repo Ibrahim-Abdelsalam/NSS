@@ -370,34 +370,7 @@ pip install highspy   # Free, open-source
 - Reduce problem size (fewer scenarios, shorter horizon)
 - Disable soft constraints (c3=0, c4=0) or fatigue modeling
 - See [TECHNICAL_GUIDE.md](docs/TECHNICAL_GUIDE.md)
-
-## Academic Foundation
-
-**Based on:** He, F., Qu, R., & Investigate, S. (2019). A two-stage stochastic mixed-integer program modelling and hybrid solution approach to re-rostering problems under uncertainty. *European Journal of Operational Research*.
-
-**Additional References:**
-- Jaber, M. Y., Givi, Z. S., & Neumann, W. P. (2013). Incorporating human fatigue and recovery into the learning–forgetting process. *Applied Mathematical Modelling*, 37(12-13), 7287-7299.
-- Rockafellar, R. T., & Uryasev, S. (2000). Optimization of conditional value-at-risk. *Journal of Risk*, 2, 21-42.
-
-**Key Extensions & Contributions:**
-1. **Overtime Paradox Resolution** — Identified and resolved gap in paper's formulation
-2. **Configurable Overtime** — Dual mode system (Paper vs NSS)
-3. **Fatigue Modeling** — SOS2-based PWL approximation (not in original paper)
-4. **Parameter Tuning Study** — 2,430-run experimental validation
-5. **Comprehensive Documentation** — Complete mathematical correspondence
-6. **Validation Framework** — Automated feasibility checking and warnings
-
-## Project Status
-
-**Research Proof-of-Concept** (December 2024-2025)
-
-This project is intended for **academic research**, **education**, and **algorithm validation**. It is not intended for production healthcare deployment without extensive clinical validation and regulatory approval.
-
-- Core model: 100% complete (22 constraints including fatigue)
-- Validation: 4/4 tests passing
-- Documentation: 10+ comprehensive guides
-- Experiments: 2,430-run parameter tuning complete
-
+  
 ## License
 
 MIT License - See [LICENSE](LICENSE) for details.
