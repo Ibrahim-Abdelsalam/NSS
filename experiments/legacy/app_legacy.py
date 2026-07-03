@@ -12,10 +12,14 @@ import json
 import base64
 from core.solver_config import get_available_solvers, recommend_solver, get_installation_instructions
 
+ASSETS_IMAGE_DIR = "assets/images"
+HERO_BANNER_PATH = f"{ASSETS_IMAGE_DIR}/banner.png"
+LOADING_GIF_PATH = f"{ASSETS_IMAGE_DIR}/loading.gif"
+
 # --- 1. PAGE CONFIGURATION ---
 st.set_page_config(
     page_title="Nurse Scheduler", 
-    page_icon="icon.png",  
+    page_icon="🩺",  
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -331,7 +335,11 @@ def get_base64_image(image_path):
         return ""
 
 # Load banner image
+<<<<<<< HEAD:experiments/legacy/app_legacy.py
 hero_bg_base64 = get_base64_image("assets/banner.png")
+=======
+hero_bg_base64 = get_base64_image(HERO_BANNER_PATH)
+>>>>>>> 2e9abe7ba7be923206b044259a0546f66020b884:app.py
 
 st.markdown(f"""
 <style>
@@ -1115,7 +1123,11 @@ if solve_button and nurses_list is not None and scenarios_df is not None:
         gif_html = ""
         try:
             # Read the GIF file and encode it in base64
+<<<<<<< HEAD:experiments/legacy/app_legacy.py
             with open("assets/loading.gif", "rb") as f:
+=======
+            with open(LOADING_GIF_PATH, "rb") as f:
+>>>>>>> 2e9abe7ba7be923206b044259a0546f66020b884:app.py
                 gif_bytes = f.read()
             gif_base64 = base64.b64encode(gif_bytes).decode("utf-8")
             gif_html = f'<img src="data:image/gif;base64,{gif_base64}" alt="loading" width="150">'
