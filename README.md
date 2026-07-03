@@ -184,69 +184,39 @@ F1-F6. Fatigue modeling constraints (optional, SOS2-based)
 
 ```
 NSS/
-├── Core Application
-│   ├── app.py                      # Streamlit web interface (2,364 lines)
-│   ├── model.py                    # Optimization model (2,376 lines, 11 functions)
-│   └── solver_config.py            # Solver detection & configuration
-│
-├── Experiments & Results
-│   ├── experiments/                # Parameter tuning experiments
-│   │   ├── parameter_tuning.py         # Factorial design (2,430 runs)
-│   │   ├── statistical_validation.py   # ANOVA and sensitivity analysis
-│   │   ├── analyze_tuning_results.py   # Results visualization
-│   │   ├── visualize_fatigue.py        # Fatigue model visualization
-│   │   └── retry_failed.py             # Retry logic for timeouts
-│   │
-│   ├── results/                    # Experiment outputs
-│   │   ├── parameter_tuning_results.csv    # 2,430 experimental runs
-│   │   ├── optimal_configurations.csv      # Top performers
-│   │   ├── sensitivity_analysis.csv        # Parameter sensitivity
-│   │   └── figures/                        # Visualization outputs
-│   │
-│   └── logs/                       # Execution logs
-│       └── parameter_tuning_60s.log        # 2.2MB detailed log
-│
-├── Data & Tests
-│   ├── data/                       # Sample datasets and test cases
-│   │   ├── sample_nurses.csv           # Basic test (10 nurses)
-│   │   ├── sample_scenarios.csv        # Basic scenarios
-│   │   ├── overtime_test_*.csv (2)     # Overtime validation
-│   │   ├── 40_nurses_30days_*.csv (2)  # Large-scale test
-│   │   └── cvar_*.csv (2)              # CVaR risk test
-│   │
-│   ├── scripts/                    # Standalone analysis scripts
-│   │   ├── VALIDATE_OVERTIME.py        # Overtime test suite
-│   │   ├── COMPLETE_TEST_INSTANCE.py   # Full example
-│   │   └── model_2.py                  # Paper-pure variant (archived)
-│   │
-│   └── tests/                      # Unit tests
-│       └── test_overtime_revert.py     # Overtime paradox verification
-│
-├── Documentation
-│   ├── Mathematical_Model.tex      # Complete mathematical formulation (47KB)
-│   ├── docs/
-│   │   ├── CVaR_Explained.tex          # CVaR risk tutorial
-│   │   ├── DETAILED_COMPARISON.md      # Line-by-line vs paper (33KB)
-│   │   ├── PAPER_ANALYSIS.md           # Overtime paradox analysis
-│   │   ├── USER_GUIDE.md               # Complete user guide
-│   │   ├── TECHNICAL_GUIDE.md          # Developer documentation
-│   │   ├── PARAMETER_GUIDE.md          # All parameters explained
-│   │   ├── CONSTRAINTS_GUIDE.md        # Constraint reference
-│   │   └── He et al. (2019).pdf        # Original research paper
-│   │
-│   └── archive/                    # Historical documentation
-│       ├── docs/                       # Superseded reports
-│       └── results/                    # Previous experiment data
-│
-├── Project Files
-│   ├── README.md                   # This file
-│   ├── requirements.txt            # Python dependencies
-│   └── LICENSE                     # MIT License
-│
-└── Support Files
-    ├── notebooks/                  # Jupyter analysis notebooks
-    ├── Output/                     # User-generated output directory
-    └── loading.gif                 # UI loading animation
+├── assets/                         # Application assets (images, etc.)
+├── core/                           # Core application logic
+│   ├── _model_core.py              # Core optimization model implementation
+│   ├── data_generator.py           # Data generation utilities
+│   ├── model.py                    # High-level model interface
+│   ├── scheduler.py                # Scheduling logic
+│   ├── solver_config.py            # Solver configuration
+│   └── validator.py                # Input validation
+├── data/                           # Data storage
+│   ├── PBL_data/                   
+│   ├── primary/                    
+│   ├── real_world_data/            
+│   └── supplementary/              
+├── docs/                           # Documentation
+├── experiments/                    # Experiments and pipeline
+│   ├── pipeline.py                 # Experiment pipeline
+│   ├── presets.py                  # Experiment presets
+│   └── legacy/                     # Legacy experiments
+├── report/                         # LaTeX reports and figures
+│   ├── Mathematical_Model.tex      
+│   ├── PROJECT_DOCUMENTATION.tex   
+│   └── Final_report.tex            
+├── tests/                          # Unit and integration tests
+│   ├── smoke_test.py               
+│   └── test_integration.py         
+├── ui/                             # Streamlit UI components
+│   ├── results_view.py             
+│   ├── sidebar.py                  
+│   └── upload_view.py              
+├── main.py                         # Application entry point
+├── requirements.txt                # Python dependencies
+├── README.md                       # This file
+└── LICENSE                         # MIT License
 ```
 
 ## Technical Stack
@@ -383,25 +353,5 @@ MIT License - See [LICENSE](LICENSE) for details.
 - HiGHS team for open-source solver
 
 ---
-
-**Citation:**
-```bibtex
-@article{he2019two,
-  title={A two-stage stochastic mixed-integer program modelling and hybrid solution approach to re-rostering problems under patient demand uncertainty},
-  author={He, Fang and Qu, Rong},
-  journal={European Journal of Operational Research},
-  year={2019}
-}
-
-@article{jaber2013incorporating,
-  title={Incorporating human fatigue and recovery into the learning–forgetting process},
-  author={Jaber, Mohamad Y and Givi, Zaher S and Neumann, W Patrick},
-  journal={Applied Mathematical Modelling},
-  volume={37},
-  number={12-13},
-  pages={7287--7299},
-  year={2013}
-}
-```
 
 **Star this repo if you find it useful for your research!**
