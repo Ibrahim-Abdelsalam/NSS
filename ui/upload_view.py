@@ -169,11 +169,8 @@ def render_upload_section() -> Tuple[Optional[List[str]], Optional[pd.DataFrame]
             st.session_state.nurses_list = nurses_list
             st.session_state.scenarios_df = scenarios_df
             st.session_state.num_scenarios = num_scenarios
-<<<<<<< HEAD
             st.session_state.validation_errors = []
             st.session_state.validation_warnings = []
-=======
->>>>>>> 74ea8bacae8f330b86ef6f5e56f1ba7ab4858ff5
             st.success(f"Generated {len(nurses_list)} nurses with {len(scenarios_df)} demand records!")
 
         if "nurses_list" in st.session_state:
@@ -195,13 +192,10 @@ def render_upload_section() -> Tuple[Optional[List[str]], Optional[pd.DataFrame]
 
         if nurse_file and scenario_file:
             try:
-<<<<<<< HEAD
                 # Clear previous validation
                 st.session_state.validation_errors = []
                 st.session_state.validation_warnings = []
                 
-=======
->>>>>>> 74ea8bacae8f330b86ef6f5e56f1ba7ab4858ff5
                 nurses_list = _parse_nurse_file(nurse_file)
 
                 if len(nurses_list) == 0:

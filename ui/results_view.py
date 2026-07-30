@@ -29,16 +29,10 @@ def _render_summary_metrics(results: Dict[str, Any], model_params: Dict[str, Any
 
     col1, col2 = st.columns(2)
     with col1:
-<<<<<<< HEAD
         total_cost = results.get('cost_breakdown', {}).get('total_cost', 0)
         st.metric(
             "Total Cost",
             f"${total_cost:,.0f}",
-=======
-        st.metric(
-            "Total Cost",
-            f"${results['cost_breakdown']['total_cost']:,.0f}",
->>>>>>> 74ea8bacae8f330b86ef6f5e56f1ba7ab4858ff5
             help="Total optimization cost inclusive of regular, overtime, and expected recourse costs.",
         )
     with col2:
@@ -629,7 +623,6 @@ def render_results(results: Dict[str, Any], model_params: Dict[str, Any], nurses
         )
         return
 
-<<<<<<< HEAD
     cost_breakdown = results.get("cost_breakdown", {})
     if not cost_breakdown:
         st.error("🚨 **Optimization Failed to Return Results**")
@@ -642,8 +635,6 @@ def render_results(results: Dict[str, Any], model_params: Dict[str, Any], nurses
         st.info("Try checking your parameters, increasing the time limit, or selecting the HiGHS solver.")
         return
 
-=======
->>>>>>> 74ea8bacae8f330b86ef6f5e56f1ba7ab4858ff5
     _render_summary_metrics(results, model_params, nurses_list, scenarios_df)
 
     tabs = st.tabs(["📅 Nurse Roster", "💵 Cost Analysis", "📊 Coverage Analysis", "⚠️ Risk Assessment", "🔬 Scenario Comparison", "📄 Full Report"])

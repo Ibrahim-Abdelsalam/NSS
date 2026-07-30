@@ -1,32 +1,15 @@
-<<<<<<< HEAD
 # Internal module — import via core/model.py only
-=======
-<<<<<<< HEAD:core/_model_core.py
-# Internal module — import via core/model.py only
-=======
-"""Core optimization and validation routines for NSS.
-
-This module contains model construction/solving, result extraction,
-validation helpers, and utility functions used by the app.
-"""
-
->>>>>>> 2e9abe7ba7be923206b044259a0546f66020b884:model_2.py
->>>>>>> 74ea8bacae8f330b86ef6f5e56f1ba7ab4858ff5
 import pulp
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from typing import List, Dict, Tuple, Optional, Any, Union
 from core.solver_config import create_solver
-<<<<<<< HEAD
-=======
 
 # Type aliases to keep function signatures readable.
 NurseList = List[str]
 ModelParams = Dict[str, Any]
 ScenarioData = pd.DataFrame
->>>>>>> 74ea8bacae8f330b86ef6f5e56f1ba7ab4858ff5
-
 
 def create_pwl_fatigue_approximation(lambda_param: float, max_hours: float = 48,
                                      num_segments: int = 6) -> Tuple[List[float], List[float], List[float]]:
