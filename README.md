@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/banner.png" alt="FROST-NS Banner" width="80%">
+  <img src="assets/app_screenshot.png" alt="FROST-NS Application Dashboard" width="100%">
 </div>
 
 <div align="center">
