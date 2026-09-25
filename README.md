@@ -1,17 +1,21 @@
 <div align="center">
-  <img src="assets/app_screenshot.png" alt="FROST-NS Application Dashboard" width="100%">
+
+[![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.45-FF4B4B.svg)](https://streamlit.io)
+[![PuLP](https://img.shields.io/badge/PuLP-2.9.0-green.svg)](https://coin-or.github.io/pulp/)
+[![Gurobi](https://img.shields.io/badge/Gurobi-11.0-red.svg)](https://www.gurobi.com/)
+[![HiGHS](https://img.shields.io/badge/HiGHS-1.7-orange.svg)](https://highs.dev/)
+
 </div>
 
+<br>
+
 <div align="center">
-  <img src="https://img.shields.io/badge/Python-3.9%2B-blue.svg?style=for-the-badge" alt="Python Version">
-  <img src="https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" alt="Streamlit">
-  <img src="https://img.shields.io/badge/Solver-PuLP%20%7C%20HiGHS%20%7C%20Gurobi-brightgreen.svg?style=for-the-badge" alt="Solver">
-  <img src="https://img.shields.io/badge/Paper-Under_Review-orange.svg?style=for-the-badge" alt="Paper Status">
-  <br>
-  <img src="https://img.shields.io/badge/License-MIT-gray.svg?style=for-the-badge" alt="License">
-  <img src="https://img.shields.io/badge/Data-Synthetic_Included-blue.svg?style=for-the-badge" alt="Data">
-  <img src="https://img.shields.io/badge/Reproducibility-100%25-brightgreen.svg?style=for-the-badge" alt="Reproducibility">
+  <img src="assets/images/Menu.png" alt="Application Menu Interface" width="100%">
 </div>
+
+<br>
 
 # FROST-NS
 
