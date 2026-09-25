@@ -1,61 +1,73 @@
-# FROST-NS 🏥📊
+<div align="center">
+  <img src="assets/banner.png" alt="FROST-NS Banner" width="80%">
+</div>
+
+<div align="center">
+  <img src="https://img.shields.io/badge/Python-3.9%2B-blue.svg" alt="Python Version">
+  <img src="https://img.shields.io/badge/Framework-Streamlit-FF4B4B.svg" alt="Streamlit">
+  <img src="https://img.shields.io/badge/Solver-PuLP%20%7C%20HiGHS-brightgreen.svg" alt="Solver">
+  <img src="https://img.shields.io/badge/License-MIT-gray.svg" alt="License">
+</div>
+
+# FROST-NS
 
 **Fatigue-Aware Risk Optimization for Stochastic Task Allocation in Nurse Scheduling**
 
-An open-source, Python-based mathematical optimization framework designed to solve one of healthcare's hardest problems: scheduling nurses while balancing financial budgets, unpredictable patient demand, and dangerous nurse exhaustion.
+An open-source mathematical optimization framework designed to address the complex challenge of healthcare staffing. FROST-NS provides a rigorous computational approach to balancing financial constraints, stochastic patient demand, and workforce fatigue.
 
 ---
 
-## 📖 The Problem
-Hospital ward managers must build next month's schedule without knowing exactly how many patients will arrive. 
-* If they schedule too many nurses "just in case," the hospital wastes money.
-* If they schedule too few, they must hire wildly expensive emergency agency nurses at the last minute.
-* If they overwork their permanent staff to cover gaps, nurses suffer from burnout and fatigue, leading to medical errors.
+## Overview
 
-**FROST-NS** solves this using advanced operations research: **Two-Stage Stochastic Mixed-Integer Linear Programming (MILP)** combined with **Conditional Value-at-Risk (CVaR)**.
+Hospital administrators must finalize monthly staffing rosters under significant uncertainty regarding daily patient volume. 
+* Over-scheduling results in an inefficient allocation of financial resources.
+* Under-scheduling necessitates the reliance on expensive emergency agency personnel.
+* Over-utilizing permanent staff to cover operational gaps increases schedule-based fatigue, which correlates with diminished quality of care.
 
----
-
-## ✨ Core Mathematical Innovations
-
-1. **Two-Stage Stochastic Optimization (The "Wedding Planner" Logic)**
-   * **Stage 1 (Here-and-Now):** Assigns permanent nurses to Regular ($sr$) and Overtime ($so$) shifts *before* the month begins.
-   * **Stage 2 (Wait-and-See):** Dynamically allocates Emergency Staff ($\alpha$) and cancels shifts ($\beta$) across dozens of simulated future disaster scenarios (e.g., flu outbreaks).
-
-2. **The Fatigue Circuit Breaker (McCormick Envelopes)**
-   * Instead of basic shift-counting, FROST-NS treats human energy like a battery. Working charges the "exhaustion battery"; resting drains it.
-   * Because industrial solvers hate curves (non-linear math), the system uses **McCormick Envelopes** to mathematically linearize biological decay. If a schedule pushes a nurse's schedule-based fatigue proxy beyond a strict biological limit, the solver physically destroys that schedule and rebuilds it.
-
-3. **Disaster Risk Control (CVaR)**
-   * Optimizing for the "average" day will bankrupt a hospital when a pandemic hits. 
-   * FROST-NS uses the **Rockafellar-Uryasev CVaR formulation** to isolate the absolute worst 5% of simulated scenarios, strictly capping the maximum allowable financial loss during extreme disasters.
+**FROST-NS** addresses these competing objectives using an advanced operations research framework: **Two-Stage Stochastic Mixed-Integer Linear Programming (MILP)** integrated with **Conditional Value-at-Risk (CVaR)**.
 
 ---
 
-## 📂 Repository Architecture
+## Core Methodological Contributions
 
-The codebase is strictly separated into mathematical processing, data extraction, and user interface rendering:
+1. **Two-Stage Stochastic Optimization**
+   * **Stage 1 (Anticipatory Allocation):** Assigns permanent nurses to Regular ($sr$) and Overtime ($so$) shifts prior to the realization of demand.
+   * **Stage 2 (Recourse Allocation):** Dynamically allocates Emergency Staff ($\alpha$) and cancels shifts ($\beta$) across a distribution of simulated future scenarios (e.g., standard fluctuations vs. epidemiological outbreaks).
+
+2. **Schedule-Based Fatigue Modeling (McCormick Envelopes)**
+   * FROST-NS models cumulative fatigue mathematically, treating exhaustion and recovery as dynamic variables across consecutive days.
+   * To maintain computational efficiency within a linear solver, the system utilizes **McCormick Envelopes** to linearize biological decay rates. The formulation establishes a strict upper bound on allowable fatigue, mathematically preventing assignments that would violate occupational health thresholds.
+
+3. **Tail-Risk Control via CVaR**
+   * Optimizing for expected value (the average scenario) leaves healthcare facilities vulnerable to extreme operational shocks. 
+   * FROST-NS utilizes the **Rockafellar-Uryasev formulation** for CVaR to isolate the worst 5% of simulated scenarios, applying a strict limit on the maximum allowable operational deficit during extreme demand spikes.
+
+---
+
+## Repository Architecture
+
+The architecture is cleanly decoupled into mathematical modeling, result extraction, and interface rendering:
 
 ```text
 /NSS/
-├── core/                  # The Mathematical Brain
-│   ├── _model_core.py     # 2,300+ line MILP engine (PuLP)
-│   ├── scheduler.py       # Extracts raw solver 1s and 0s back into DataFrames
-│   ├── validator.py       # Data integrity bouncer (catches negative demand, etc.)
-│   └── solver_config.py   # Connects to industrial C++ solvers (HiGHS / CBC)
-├── ui/                    # The Streamlit Dashboard
+├── core/                  
+│   ├── _model_core.py     # Primary MILP engine (PuLP implementation)
+│   ├── scheduler.py       # Extracts binary solver variables into Pandas DataFrames
+│   ├── validator.py       # Data integrity layer 
+│   └── solver_config.py   # Interface to industrial solvers (HiGHS / CBC)
+├── ui/                    
 │   ├── upload_view.py     # CSV sanitization and ingestion
-│   ├── sidebar.py         # Dynamic parameter injection
-│   └── results_view.py    # Plotly heatmaps and ReportLab PDF generation
-├── experiments/           # Automation for Academic Reproducibility
-│   └── pipeline.py        # Automated parameter sweeping and baseline comparisons
-├── data/                  # Synthetic proof-of-concept demand & nurse parameters
-└── main.py                # Application entry point
+│   ├── sidebar.py         # Dynamic parameter configuration
+│   └── results_view.py    # Plotly visualizations and ReportLab PDF generation
+├── experiments/           
+│   └── pipeline.py        # Automated parameter sweeping and metric extraction
+├── data/                  # Synthetic benchmark instances and demand scenarios
+└── main.py                # Streamlit application entry point
 ```
 
 ---
 
-## 🚀 Installation & Usage
+## Installation and Usage
 
 1. **Clone the repository:**
    ```bash
@@ -67,25 +79,26 @@ The codebase is strictly separated into mathematical processing, data extraction
    ```bash
    pip install -r requirements.txt
    ```
-   *(Note: Ensure you have an optimization solver like HiGHS or CBC installed on your system. The code automatically detects available solvers via PuLP).*
+   *(Note: Ensure an optimization solver such as HiGHS or CBC is installed on your local machine. The framework detects available solvers via PuLP).*
 
-3. **Run the Application:**
+3. **Launch the Application:**
    ```bash
    streamlit run main.py
    ```
-   This will launch the interactive web dashboard where you can upload CSVs, adjust fatigue limits, and visualize the optimized rosters.
+   This initiates the interactive dashboard for data upload, parameter configuration, and roster visualization.
 
 ---
 
-## 🔬 Academic Research & Reproducibility
-This repository serves as a **synthetic proof-of-concept** for researchers extending stochastic rostering models. 
+## Experimental Framework and Reproducibility
 
-**For Peer Reviewers & Researchers:**
-* **Synthetic Demand Generation:** The `data/` folder contains generated instances reflecting $\pm10\%, 20\%, 30\%$ uniform demand variance across discrete scenarios.
-* **Sensitivity Analysis:** Use the scripts in the `experiments/` directory to run automated batch-tests. The framework supports sweeping parameters for Fatigue limits ($F$), Workload limits ($W$), CVaR confidence levels ($\alpha$), and financial cost penalties to measure the trade-off between financial cost and clinical unmet demand.
-* **Baseline Comparisons:** The solver hooks allow disabling CVaR or Fairness constraints to establish deterministic performance baselines.
+This repository serves as a synthetic proof-of-concept for researchers extending stochastic rostering models. 
+
+**For Peer Reviewers and Researchers:**
+* **Synthetic Demand Generation:** The `data/` directory contains generated instances reflecting uniform demand variances across discrete scenarios.
+* **Sensitivity Analysis:** The scripts within the `experiments/` directory facilitate automated batch-testing. Researchers can sweep parameters for Fatigue limits ($F$), Workload limits ($W$), CVaR confidence levels ($\alpha$), and cost penalty ratios to evaluate the trade-off between financial expenditure and clinical unmet demand.
+* **Comparative Baselines:** The solver configuration allows users to selectively disable CVaR constraints, Fairness constraints, or Fatigue limits to establish deterministic and baseline performance metrics.
 
 ---
 
-## 📄 License
-This project is open-source and available under the standard MIT License.
+## License
+This project is open-source and distributed under the MIT License.
