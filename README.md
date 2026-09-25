@@ -5,13 +5,12 @@
 <div align="center">
   <img src="https://img.shields.io/badge/Python-3.9%2B-blue.svg?style=for-the-badge" alt="Python Version">
   <img src="https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" alt="Streamlit">
-  <img src="https://img.shields.io/badge/Solver-PuLP%20%7C%20HiGHS-brightgreen.svg?style=for-the-badge" alt="Solver">
+  <img src="https://img.shields.io/badge/Solver-PuLP%20%7C%20HiGHS%20%7C%20Gurobi-brightgreen.svg?style=for-the-badge" alt="Solver">
   <img src="https://img.shields.io/badge/Paper-Under_Review-orange.svg?style=for-the-badge" alt="Paper Status">
   <br>
-  <img src="https://img.shields.io/github/license/Ibrahim-Abdelsalam/NSS?style=for-the-badge" alt="License">
-  <img src="https://img.shields.io/github/stars/Ibrahim-Abdelsalam/NSS?style=for-the-badge" alt="Stars">
-  <img src="https://img.shields.io/github/forks/Ibrahim-Abdelsalam/NSS?style=for-the-badge" alt="Forks">
-  <img src="https://img.shields.io/github/issues/Ibrahim-Abdelsalam/NSS?style=for-the-badge" alt="Issues">
+  <img src="https://img.shields.io/badge/License-MIT-gray.svg?style=for-the-badge" alt="License">
+  <img src="https://img.shields.io/badge/Data-Synthetic_Included-blue.svg?style=for-the-badge" alt="Data">
+  <img src="https://img.shields.io/badge/Reproducibility-100%25-brightgreen.svg?style=for-the-badge" alt="Reproducibility">
 </div>
 
 # FROST-NS
