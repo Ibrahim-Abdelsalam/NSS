@@ -386,7 +386,31 @@ def _render_cost_tab(results: Dict[str, Any], model_params: Dict[str, Any]) -> N
         font=dict(family="Inter, sans-serif", size=14, color="#475569"),
     )
     st.plotly_chart(fig_bar, use_container_width=True, config={"displayModeBar": False})
+    
+    st.markdown("---")
+    st.subheader("🧮 Mathematical Breakdown")
+    with st.expander("View Exact Cost Calculation (Solver Audit)", expanded=False):
+        c1 = cost["stage1_regular_cost"] / max(1, cost["total_regular_shifts"])
+        c_emerg = cost["stage2_expected_cost"] / avg_emergency if avg_emergency > 0 else 0
+        
+        breakdown_md = f"""
+**Step 1: Calculate Stage 1 (The Baseline Schedule)**
+* **Baseline Capacity Used:** `{cost["total_regular_shifts"]:,.0f} shifts`
+* **Base Regular Wage:** `${c1:,.2f}`
+* **Baseline Cost:** `{cost["total_regular_shifts"]:,.0f} shifts × ${c1:,.2f} = ${cost["stage1_regular_cost"]:,.2f}`
 
+**Step 2: Calculate Stage 2 (Expected Recourse & Emergency Cost)**
+* Across all randomized scenarios, the hospital fell short by an average of **{avg_emergency:,.4f} shifts**.
+* To strictly avoid cancellation penalties, the solver procured exactly {avg_emergency:,.1f} Emergency Shifts (defaulting to the cheapest available legal skill tier).
+* **Skill-Scaled Emergency Wage:** `${c_emerg:,.2f} per shift`
+* **Expected Recourse Cost:** `{avg_emergency:,.4f} shifts × ${c_emerg:,.2f} = ${cost["stage2_expected_cost"]:,.2f}`
+
+**Step 3: Calculate the Grand Total**
+* **Baseline Cost:** `${cost["stage1_regular_cost"]:,.2f}`
+* **Emergency Cost:** `${cost["stage2_expected_cost"]:,.2f}`
+* **Grand Total:** `${cost["stage1_regular_cost"]:,.2f} + ${cost["stage2_expected_cost"]:,.2f} = ${cost["total_cost"]:,.2f}`
+"""
+        st.markdown(breakdown_md)
 
 def _render_coverage_tab(results: Dict[str, Any]) -> None:
     """Render the coverage analysis tab."""

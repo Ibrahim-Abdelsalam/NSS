@@ -20,7 +20,7 @@ def render_sidebar() -> Dict[str, Any]:
             """,
             unsafe_allow_html=True,
         )
-
+        
         st.header("Cost Parameters")
         with st.expander("Wage Costs", expanded=True):
             st.markdown(
@@ -34,13 +34,13 @@ def render_sidebar() -> Dict[str, Any]:
                 - The model will choose the optimal mix based on these costs and demand risk
                 """
             )
-            c1 = st.number_input("Regular Shift Cost ($c_1$)", 0.0, 10000.0, 100.0, 1.0)
-            c2 = st.number_input("Overtime Shift Cost ($c_2$)", 0.0, 10000.0, 150.0, 1.0)
-            q_plus = st.number_input("Emergency Shift Cost ($q^+$)", 0.0, 10000.0, 200.0, 1.0)
+            c1 = st.number_input("Regular Shift Cost ($c_1$)", 0.0, 10000000.0, 100.0, 1.0)
+            c2 = st.number_input("Overtime Shift Cost ($c_2$)", 0.0, 10000000.0, 150.0, 1.0)
+            q_plus = st.number_input("Emergency Shift Cost ($q^+$)", 0.0, 10000000.0, 200.0, 1.0)
             q_minus = st.number_input(
                 "Shift Cancellation Cost ($q^-$)",
                 0.0,
-                100.0,
+                10000000.0,
                 2.0,
                 1.0,
                 help="Cost per cancelled shift (paper: q⁻=2). Set to 0 to ignore cancellation costs.",
@@ -98,10 +98,23 @@ def render_sidebar() -> Dict[str, Any]:
                 max_cancellations = float("inf")
 
         st.header("📋 Work Rules")
+        with st.expander("Fairness & Workload Balancing", expanded=True):
+            delta_w = st.number_input(
+                "Max Shift Spread (ΔW)", 
+                0, 100, 100, 1,
+                help="Maximum allowed difference in total shifts between the most-worked and least-worked nurse. (100 = disabled)"
+            )
+            delta_n = st.number_input(
+                "Max Night Shift Spread (ΔN)", 
+                0, 100, 100, 1,
+                help="Maximum allowed difference in night shifts between nurses. (100 = disabled)"
+            )
+            
         with st.expander("Basic Shift Constraints", expanded=True):
             n1 = st.slider("Max Total Shifts ($n_1$)", 1, 30, 15, 1)
             n2 = st.slider("Max Night Shifts ($n_2$)", 0, 15, 5, 1)
             n3 = st.slider("Min Regular Shifts ($n_3$)", 0, 20, 5, 1)
+            c_bar = st.slider("Max Consecutive Working Days ($C_{bar}$)", 1, 14, 4, 1)
             overtime_capacity = n1 - n3
             st.info(f"Overtime capacity: Up to {overtime_capacity} overtime shifts per nurse (= $n_1$ - $n_3$)")
 
@@ -204,15 +217,18 @@ def render_sidebar() -> Dict[str, Any]:
 
         model_choice = st.selectbox(
             "Select Model Type:",
-            ["Cost Optimization (SDM)", "Risk-Aware with CVaR (SDM-CVaR)"],
-            help="SDM minimizes cost. SDM-CVaR also controls worst-case understaffing risk.",
+            ["Deterministic (Expected Value)", "Two-Stage Stochastic (SDM)", "Risk-Aware with CVaR (SDM-CVaR)"],
+            index=2,
+            help="Deterministic averages all scenarios. SDM optimizes across all stochastic scenarios. SDM-CVaR controls tail-risk.",
         )
 
         model_type_code = "SDM"
         sigma = None
         mu = None
-
-        if "CVaR" in model_choice:
+        
+        if "Deterministic" in model_choice:
+            model_type_code = "Deterministic"
+        elif "CVaR" in model_choice:
             model_type_code = "SDM-CVaR"
             with st.expander("Risk Parameters", expanded=True):
                 sigma = st.slider(
@@ -308,6 +324,15 @@ def render_sidebar() -> Dict[str, Any]:
             help="AUTO automatically selects the fastest available solver. Manual selection available if you encounter issues.",
         )
 
+        solve_time_limit = st.number_input(
+            "Solve Time Limit (seconds)",
+            value=0,
+            min_value=0,
+            help="Maximum time allowed for the solver. Enter 0 for NO LIMIT.",
+            step=10
+        )
+
+
         if solver_choice == "AUTO (Recommended)":
             selected_solver = auto_select_solver()
             st.info(f"Auto-selected: {selected_solver} ({solver_details.get(selected_solver, {}).get('speed', 'Standard')})")
@@ -324,9 +349,12 @@ def render_sidebar() -> Dict[str, Any]:
             "q_minus": q_minus,
             "c3": c3,
             "c4": c4,
+            "Delta_W": delta_w,
+            "Delta_N": delta_n,
             "n1": n1,
             "n2": n2,
             "n3": n3,
+            "C_bar": c_bar,
             "patient_safety_enabled": enable_fatigue,
             "fatigue_lambda": lambda_param,
             "recovery_mu": 0.05,

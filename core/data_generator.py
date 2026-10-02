@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from typing import List, Tuple
-
 import numpy as np
 import pandas as pd
 
+from core.advanced_data_generator import HeterogeneousNurseGenerator, ExogenousDemandGenerator
+
 
 class SampleDataGenerator:
-    """Generate synthetic nurse lists and demand scenarios for testing."""
+    """Generate synthetic nurse lists and demand scenarios using advanced heterogeneous/exogenous generators."""
 
     @staticmethod
     def _get_rng(seed: int | None):
@@ -18,11 +19,10 @@ class SampleDataGenerator:
             return np.random
         return np.random.default_rng(seed)
 
-    def generate_nurses(self, n: int, seed: int | None = None) -> pd.DataFrame:
-        """Generate a nurse list as a DataFrame."""
-        _ = self._get_rng(seed)
-        nurses_list = [f"N{i + 1}" for i in range(n)]
-        return pd.DataFrame({"nurse_id": nurses_list})
+    def generate_nurses(self, n: int, num_days: int = 14, seed: int | None = None) -> pd.DataFrame:
+        """Generate a nurse list using HeterogeneousNurseGenerator."""
+        gen = HeterogeneousNurseGenerator(seed=seed)
+        return gen.generate(n, num_days=num_days)
 
     def generate_scenarios(
         self,
@@ -31,37 +31,14 @@ class SampleDataGenerator:
         num_days: int = 14,
         num_scenarios: int = 5,
     ) -> pd.DataFrame:
-        """Generate synthetic demand scenarios as a DataFrame."""
-        rng = self._get_rng(seed)
-        shifts = ["E", "D", "L", "N"]
-        scenario_data = []
-        base_demand_pct = {
-            "E": 0.25,
-            "D": 0.30,
-            "L": 0.25,
-            "N": 0.15,
-        }
-
-        for scenario in range(1, num_scenarios + 1):
-            for day in range(1, num_days + 1):
-                for shift in shifts:
-                    base = max(1, int(n * base_demand_pct[shift]))
-                    variation = rng.uniform(-0.15, 0.15)
-                    demand = max(1, int(base * (1 + variation)))
-
-                    if day % 7 in [0, 6]:
-                        demand = max(1, int(demand * 0.8))
-
-                    scenario_data.append(
-                        {
-                            "scenario": scenario,
-                            "day": day,
-                            "shift": shift,
-                            "demand": demand,
-                        }
-                    )
-
-        return pd.DataFrame(scenario_data)
+        """Generate synthetic demand scenarios using ExogenousDemandGenerator."""
+        gen = ExogenousDemandGenerator(seed=seed)
+        scale_factor = n / 30.0
+        scenarios_df = gen.generate(n_scenarios=num_scenarios, num_days=num_days, scale_factor=scale_factor)
+        # Aggregate across skills to maintain (scenario, day, shift, demand) interface compatibility
+        if "skill" in scenarios_df.columns:
+            scenarios_df = scenarios_df.groupby(["scenario", "day", "shift"], as_index=False)["demand"].sum()
+        return scenarios_df
 
     def generate_sample_data(
         self,
@@ -69,9 +46,9 @@ class SampleDataGenerator:
         num_days: int = 14,
         num_scenarios: int = 5,
         seed: int | None = None,
-    ) -> Tuple[List[str], pd.DataFrame]:
+    ) -> Tuple[List[str], pd.DataFrame, pd.DataFrame]:
         """Generate nurse names and demand scenarios for a sample instance."""
-        nurses_df = self.generate_nurses(num_nurses, seed=seed)
+        nurses_df = self.generate_nurses(num_nurses, num_days=num_days, seed=seed)
         nurses_list = nurses_df["nurse_id"].astype(str).tolist()
         scenarios_df = self.generate_scenarios(
             num_nurses,
@@ -79,7 +56,8 @@ class SampleDataGenerator:
             num_days=num_days,
             num_scenarios=num_scenarios,
         )
-        return nurses_list, scenarios_df
+        return nurses_list, scenarios_df, nurses_df
+
 
 
 def generate_nurses(n: int, seed: int | None = None) -> pd.DataFrame:
@@ -107,7 +85,7 @@ def generate_sample_data(
     num_days: int = 14,
     num_scenarios: int = 5,
     seed: int | None = None,
-) -> Tuple[List[str], pd.DataFrame]:
+) -> Tuple[List[str], pd.DataFrame, pd.DataFrame]:
     """Backward-compatible wrapper for generating a complete sample instance."""
     return SampleDataGenerator().generate_sample_data(
         num_nurses=num_nurses,

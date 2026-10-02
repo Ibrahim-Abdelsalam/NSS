@@ -12,9 +12,9 @@ import streamlit as st
 from core.data_generator import generate_sample_data
 
 
-def _parse_nurse_file(nurse_file) -> List[str]:
-    """Parse uploaded nurse data into a list of nurse identifiers."""
-    nurses_list: List[str] = []
+def _parse_nurse_file_and_df(nurse_file) -> Tuple[List[str], pd.DataFrame]:
+    """Parse uploaded nurse data into a DataFrame, preserving heterogeneous attributes."""
+    nurses_df = pd.DataFrame()
 
     try:
         try:
@@ -23,12 +23,13 @@ def _parse_nurse_file(nurse_file) -> List[str]:
             pass
 
         try:
-            nurses_df = pd.read_csv(nurse_file, header=None)
+            nurses_df = pd.read_csv(nurse_file)
             if nurses_df.shape[1] == 1:
-                nurses_list = nurses_df.iloc[:, 0].astype(str).tolist()
-            else:
-                values = nurses_df.values.flatten()
-                nurses_list = [str(value).strip() for value in values if str(value).strip()]
+                nurses_df = pd.DataFrame({"nurse_id": nurses_df.iloc[:, 0].astype(str)})
+            elif 'nurse_id' not in nurses_df.columns and 'nurse' in nurses_df.columns:
+                nurses_df = nurses_df.rename(columns={'nurse': 'nurse_id'})
+            elif 'nurse_id' not in nurses_df.columns:
+                nurses_df = nurses_df.rename(columns={nurses_df.columns[0]: 'nurse_id'})
         except pd.errors.EmptyDataError:
             raise
     except pd.errors.EmptyDataError:
@@ -36,7 +37,7 @@ def _parse_nurse_file(nurse_file) -> List[str]:
     except Exception:
         pass
 
-    if not nurses_list:
+    if nurses_df.empty:
         try:
             try:
                 nurse_file.seek(0)
@@ -49,31 +50,36 @@ def _parse_nurse_file(nurse_file) -> List[str]:
                 raw = nurse_file.read()
 
             if isinstance(raw, (bytes, bytearray)):
-                try:
-                    text = raw.decode("utf-8")
-                except Exception:
-                    text = raw.decode("latin-1", errors="ignore")
+                text = raw.decode("utf-8", errors="ignore")
             else:
                 text = str(raw)
 
             text = text.strip()
             if not text:
-                nurses_list = []
+                nurses_df = pd.DataFrame()
             elif "\n" not in text and "," in text:
                 nurses_list = [segment.strip() for segment in text.split(",") if segment.strip()]
+                nurses_df = pd.DataFrame({"nurse_id": nurses_list})
             else:
-                reader = pd.read_csv(StringIO(text), header=None)
+                reader = pd.read_csv(StringIO(text))
                 if reader.shape[1] == 1:
-                    nurses_list = reader.iloc[:, 0].astype(str).tolist()
-                else:
-                    flat = [str(cell).strip() for cell in reader.values.flatten() if str(cell).strip()]
-                    nurses_list = flat
+                    nurses_df = pd.DataFrame({"nurse_id": reader.iloc[:, 0].astype(str)})
+                elif 'nurse_id' not in reader.columns and 'nurse' in reader.columns:
+                    nurses_df = reader.rename(columns={'nurse': 'nurse_id'})
+                elif 'nurse_id' not in reader.columns:
+                    nurses_df = reader.rename(columns={reader.columns[0]: 'nurse_id'})
         except Exception as e:
             st.error(f"Failed to parse nurse file: {e}")
             st.stop()
 
-    nurses_list = [nurse for nurse in nurses_list if str(nurse).strip()]
-    return nurses_list
+    if not nurses_df.empty:
+        nurses_df['nurse_id'] = nurses_df['nurse_id'].astype(str).str.strip()
+        nurses_df = nurses_df[nurses_df['nurse_id'] != ""]
+        nurses_list = nurses_df['nurse_id'].tolist()
+    else:
+        nurses_list = []
+        
+    return nurses_list, nurses_df
 
 
 def _load_and_validate_scenarios(scenario_file) -> pd.DataFrame:
@@ -135,7 +141,7 @@ def _load_and_validate_scenarios(scenario_file) -> pd.DataFrame:
     return scenarios_df
 
 
-def render_upload_section() -> Tuple[Optional[List[str]], Optional[pd.DataFrame]]:
+def render_upload_section() -> Tuple[Optional[pd.DataFrame], Optional[pd.DataFrame]]:
     """Render the data source section and return loaded nurses and scenarios."""
     nurses_list: Optional[List[str]] = None
     scenarios_df: Optional[pd.DataFrame] = None
@@ -163,11 +169,24 @@ def render_upload_section() -> Tuple[Optional[List[str]], Optional[pd.DataFrame]
             st.session_state.get("num_scenarios", 5),
             1,
         )
+        
+        use_seed = st.checkbox("Lock Random Seed (For Reproducibility)", value=True)
+        if use_seed:
+            seed = st.number_input(
+                "Seed Number",
+                0,
+                999999,
+                42,
+                help="Generates the exact same random data every time.",
+            )
+        else:
+            seed = None
 
         if st.button("🎲 Generate Sample Data", type="primary", use_container_width=True):
-            nurses_list, scenarios_df = generate_sample_data(num_nurses, num_days, num_scenarios)
+            nurses_list, scenarios_df, nurses_df = generate_sample_data(num_nurses, num_days, num_scenarios, seed=seed)
             st.session_state.nurses_list = nurses_list
             st.session_state.scenarios_df = scenarios_df
+            st.session_state.nurses_df = nurses_df
             st.session_state.num_scenarios = num_scenarios
             st.session_state.validation_errors = []
             st.session_state.validation_warnings = []
@@ -196,7 +215,8 @@ def render_upload_section() -> Tuple[Optional[List[str]], Optional[pd.DataFrame]
                 st.session_state.validation_errors = []
                 st.session_state.validation_warnings = []
                 
-                nurses_list = _parse_nurse_file(nurse_file)
+                nurses_list, nurses_df = _parse_nurse_file_and_df(nurse_file)
+                st.session_state.nurses_df = nurses_df
 
                 if len(nurses_list) == 0:
                     st.error("Nurse file is empty or could not be parsed. Ensure it contains one name per line or a comma-separated list.")
@@ -215,6 +235,7 @@ def render_upload_section() -> Tuple[Optional[List[str]], Optional[pd.DataFrame]
 
                 st.session_state.nurses_list = nurses_list
                 st.session_state.scenarios_df = scenarios_df
+                st.session_state.nurses_df = nurses_df
 
             except Exception as e:
                 st.error(f"Error loading files: {e}")

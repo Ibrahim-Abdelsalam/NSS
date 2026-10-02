@@ -96,6 +96,8 @@ class SolverConfig:
     @staticmethod
     def get_solver(solver_name: str, time_limit: int, mip_gap: float, verbose: bool = False):
         """Create and configure a solver instance."""
+        if time_limit == 0:
+            time_limit = None
         if solver_name == "AUTO" or solver_name is None:
             solver_name = SolverConfig.auto_select_solver()
 

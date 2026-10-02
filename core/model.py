@@ -43,6 +43,7 @@ class NurseSchedulingModel:
         parameters: Dict[str, Any],
         nurses_list: Optional[List[str]] = None,
         scenarios_df: Optional[pd.DataFrame] = None,
+    nurses_df: Optional[pd.DataFrame] = None,
         model_type: str = "SDM",
         solver_name: str = "AUTO",
     ):
@@ -50,6 +51,7 @@ class NurseSchedulingModel:
         self.parameters = dict(parameters)
         self.nurses_list = list(nurses_list) if nurses_list is not None else []
         self.scenarios_df = scenarios_df.copy() if scenarios_df is not None else pd.DataFrame()
+        self.nurses_df = nurses_df.copy() if nurses_df is not None else pd.DataFrame()
         self.model_type = model_type
         self.solver_name = solver_name
         self.fatigue_enabled = bool(self.parameters.get("patient_safety_enabled", False))
@@ -72,16 +74,86 @@ class NurseSchedulingModel:
         return self._solve_result
 
     def build(self) -> "NurseSchedulingModel":
-        """Build the optimization model using the existing implementation."""
-        from core._model_core import build_and_solve_model
+        """Build the optimization model using the new advanced implementation."""
+        from core.frost_model import build_frost_ns_model
+        import pulp
 
-        problem, status = build_and_solve_model(
-            self.nurses_list,
-            self.scenarios_df,
-            self.parameters,
-            model_type=self.model_type,
-            solver_name=self.solver_name,
+        if self.scenarios_df.empty:
+            return self
+
+        days_list = sorted(list(self.scenarios_df['day'].unique()))
+        shifts_list = sorted(list(self.scenarios_df['shift'].unique()))
+        
+        if 'scenario' in self.scenarios_df.columns:
+            scenarios_list = sorted(list(self.scenarios_df['scenario'].unique()))
+        else:
+            scenarios_list = [1]
+            self.scenarios_df['scenario'] = 1
+
+        demand_dict = {}
+        has_skill = 'skill' in self.scenarios_df.columns
+        for _, row in self.scenarios_df.iterrows():
+            d, s, sc = int(row['day']), row['shift'], int(row['scenario'])
+            if has_skill:
+                demand_dict[(d, s, row['skill'], sc)] = int(row['demand'])
+            else:
+                demand_dict[(d, s, sc)] = int(row['demand'])
+
+        
+        # Bridge legacy UI parameters to new FROST-NS parameter names
+        bridge = {
+            'c1': 'c_planned',
+            'q_plus': 'c_emergency',
+            'q_minus': 'c_unmet',
+            'n1': 'W_bar',
+            'n2': 'N_bar',
+            
+            'max_emergency_staff': 'a_bar',
+            'sigma': 'alpha',
+            'mu': 'tau'
+        }
+        for old_k, new_k in bridge.items():
+            if old_k in self.parameters and new_k not in self.parameters:
+                self.parameters[new_k] = self.parameters[old_k]
+                
+        # Fatigue toggle bridge
+        if not self.parameters.get('patient_safety_enabled', True):
+            self.parameters['F_bar'] = 999  # Effectively disables fatigue limits
+            
+        if hasattr(self, 'nurses_df') and not self.nurses_df.empty:
+            if 'skill_level' in self.nurses_df.columns:
+                self.parameters['nurse_skill'] = dict(zip(self.nurses_df['nurse_id'], self.nurses_df['skill_level']))
+            elif 'skill' in self.nurses_df.columns:
+                self.parameters['nurse_skill'] = dict(zip(self.nurses_df['nurse_id'], self.nurses_df['skill']))
+            if 'max_shifts' in self.nurses_df.columns:
+                self.parameters['W_bar_i'] = dict(zip(self.nurses_df['nurse_id'], self.nurses_df['max_shifts']))
+            if 'max_nights' in self.nurses_df.columns:
+                self.parameters['N_bar_i'] = dict(zip(self.nurses_df['nurse_id'], self.nurses_df['max_nights']))
+        problem = build_frost_ns_model(
+            nurses=self.nurses_list,
+            days=days_list,
+            shifts=shifts_list,
+            scenarios=scenarios_list,
+            demand=demand_dict,
+            params=self.parameters
         )
+        
+        time_limit = self.parameters.get('solve_time_limit')
+        if time_limit == 0:
+            time_limit = None
+            
+        solver_name = self.parameters.get('solver_name', 'AUTO')
+        print(f"DEBUG: solver_name={solver_name}, GUROBI_available={pulp.GUROBI().available()}")
+        if solver_name == 'GUROBI' or (solver_name == 'AUTO' and pulp.GUROBI().available()):
+            print("DEBUG: Using GUROBI")
+            solver = pulp.GUROBI_CMD(msg=0, timeLimit=time_limit) if hasattr(pulp, 'GUROBI_CMD') else pulp.GUROBI(msg=0, timeLimit=time_limit)
+        else:
+            print("DEBUG: Using CBC")
+            solver = pulp.PULP_CBC_CMD(msg=0, timeLimit=time_limit)
+            
+        problem.solve(solver)
+        
+        status = pulp.LpStatus[problem.status]
         self._artifacts = _BuildArtifacts(problem=problem, status=status)
         return self
 
@@ -105,7 +177,23 @@ class NurseSchedulingModel:
         variable_values: Dict[str, Any] = {}
         if hasattr(problem, "variables"):
             for variable in problem.variables():
-                variable_values[variable.name] = variable.varValue if variable.varValue else 0
+                val = variable.varValue if variable.varValue else 0
+                variable_values[variable.name] = val
+                
+                # Trick the legacy UI into rendering our new FROST-NS model outputs
+                # Map x_Nurse_Day_Shift to RegularShift_Nurse_Day_Shift
+                if variable.name.startswith("x_"):
+                    legacy_name = variable.name.replace("x_", "RegularShift_").replace("'", "").replace(" ", "")
+                    variable_values[legacy_name] = val
+                
+                # Map CVaR eta to legacy VaR_xi so Risk Assessment tab works
+                if variable.name == "eta":
+                    variable_values["VaR_xi"] = val
+        
+        # Inject legacy cost parameters so the UI cost breakdown doesn't crash
+        self.parameters.setdefault('c1', self.parameters.get('c_planned', 100))
+        self.parameters.setdefault('c2', 0)
+        self.parameters.setdefault('q_plus', self.parameters.get('c_emergency', 200))
 
         solve_time_seconds = float(self.parameters.get("solve_time_seconds", 0.0))
         metadata = {
@@ -142,6 +230,7 @@ class FatigueAwareNurseSchedulingModel(NurseSchedulingModel):
         parameters: Dict[str, Any],
         nurses_list: Optional[List[str]] = None,
         scenarios_df: Optional[pd.DataFrame] = None,
+    nurses_df: Optional[pd.DataFrame] = None,
         model_type: str = "SDM",
         solver_name: str = "AUTO",
     ):
@@ -155,6 +244,7 @@ def create_model(
     parameters: Dict[str, Any],
     nurses_list: Optional[List[str]] = None,
     scenarios_df: Optional[pd.DataFrame] = None,
+    nurses_df: Optional[pd.DataFrame] = None,
     model_type: str = "SDM",
     solver_name: str = "AUTO",
 ) -> NurseSchedulingModel:
@@ -166,6 +256,7 @@ def create_model(
             scenarios_df,
             model_type=model_type,
             solver_name=solver_name,
+            nurses_df=nurses_df
         )
 
     return NurseSchedulingModel(
@@ -174,6 +265,7 @@ def create_model(
         scenarios_df,
         model_type=model_type,
         solver_name=solver_name,
+        nurses_df=nurses_df
     )
 
 
@@ -194,4 +286,5 @@ def build_and_solve_model(
         model_params,
         model_type=model_type,
         solver_name=solver_name,
+        nurses_df=nurses_df
     )

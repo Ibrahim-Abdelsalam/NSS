@@ -214,9 +214,9 @@ class ResultExtractor:
 
                 parts = key.split("_")
                 if len(parts) >= 2 and parts[-1] == scenario_str:
-                    if "AddShift" in key:
+                    if "AddShift" in key or key.startswith("a_"):
                         total_shortage += value
-                    elif "CancelShift" in key:
+                    elif "CancelShift" in key or key.startswith("u_"):
                         total_overage += value
 
             scenario_results.append(
